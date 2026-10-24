@@ -15,7 +15,7 @@
   "domain": "cdn-update-sync.example",
   "process": "powershell.exe",
   "parent_process": "WINWORD.EXE",
-  "event_type": "process_spawn",
+  "event_type": "office_spawn_shell",
   "severity_raw": "medium",
   "raw": {}
 }
@@ -48,7 +48,7 @@ es la llave para mapear a ATT&CK.
   ],
   "signals": [
     {"name": "Kill chain depth", "detail": "8 tactics covered", "points": 30},
-    {"name": "Privileged account involved", "detail": "svc_backup", "points": 15}
+    {"name": "Privileged account involved", "detail": "svc_backup", "points": 10}
   ],
   "ai": {
     "narrative": "At 14:02 ...",

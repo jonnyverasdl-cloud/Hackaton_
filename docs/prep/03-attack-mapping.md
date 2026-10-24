@@ -8,7 +8,7 @@
 | `email_link_suspicious` | Initial Access | T1566.002 | gateway: URL a dominio nuevo |
 | `office_spawn_shell` | Execution | T1059.001 | edr: parent WINWORD/EXCEL, child powershell/cmd/wscript |
 | `encoded_powershell` | Execution | T1059.001 | edr: `-enc`, `-e `, `FromBase64String` |
-| `outbound_new_domain` | Command and Control | T1071.001 | proxy: dominio < 30 días o sin categoría + host interno |
+| `outbound_new_domain` | Command and Control | T1071.001 | proxy: dominio < 30 días y sin categoría + host interno (la categoría sola no basta) |
 | `scheduled_task_created` | Persistence | T1053.005 | edr: schtasks / TaskScheduler event |
 | `registry_run_key` | Persistence | T1547.001 | edr: Run/RunOnce |
 | `auth_spray` | Credential Access | T1110.003 | auth: ≥ 20 fallos, ≥ 5 cuentas, 1 origen, ≤ 5 min |
@@ -43,17 +43,17 @@ El componente conexo es el incidente. ~80 líneas.
 
 | Señal | Puntos | Condición |
 |---|---|---|
-| Kill chain depth | 5 por táctica distinta, máx. 35 | tácticas cubiertas |
-| Impact stage reached | 20 | alguna técnica T1490 / T1486 |
+| Kill chain depth | 5 por táctica distinta, máx. 30 | tácticas cubiertas |
+| Impact stage reached | 15 | alguna técnica T1490 / T1486 |
 | Lateral movement | 15 | ≥ 2 hosts unidos por `user_pivot` o `shared_infra` |
 | Privileged / service account | 10 | usuario empieza por `svc_` o está en lista de admins |
-| C2 to new infrastructure | 10 | `outbound_new_domain` |
+| C2 to new infrastructure | 5 | `outbound_new_domain` |
 | Credential access | 10 | `auth_spray` |
 | Initial access confirmed | 5 | técnica T1566.* |
 | Volume (ruido no suma) | 0 | — |
 
-Escenario esperado: 8 tácticas → 35 (tope) + 20 + 15 + 10 + 10 + 10 + 5 = **105 → tope 100**.
-Ajustar pesos para que el ataque quede ~85–95 y no al tope (bajar kill chain a 4/táctica, máx 28).
+Escenario esperado: 8 tácticas → 30 (tope) + 15 + 15 + 10 + 5 + 10 + 5 = **90**.
+Pesos ajustados el 24-oct (antes 35/20/10 daban 105 → tope 100). El test exige 85–95.
 El escaneo de vulnerabilidades: 0 tácticas, ruido → **0–10, benign**.
 
 ## Qué hace la IA (y qué no)

@@ -16,9 +16,9 @@ the code and run the tests.
    (70/30), rule or action that differs from the spec is a finding. If the deviation is better than
    the spec, say so explicitly and recommend updating the spec.
 2. **The demo scenario.** Run the tests. Then verify by reading, not assuming: does
-   `docs/prep/scenario.json` produce exactly one malicious incident with the 8 `_attack` alerts and
+   `scenario.json` (repo root, from `tools/gen_scenario.py`) produce exactly one malicious incident with the 8 `_truth.attack` alerts and
    none of the noise? Does the scanner form its own benign incident? Are the two early failed
-   logons of `maria.lopez` excluded? Is `_attack` stripped before serving?
+   logons of `maria.lopez` excluded? Is `_truth` stripped before serving?
 3. **Autonomy safety.** Only catalog actions execute. Only `reversible: true` actions execute
    without `/approve`. Re-correlation never executes an action twice. Every system action has a
    `reason` and appears in `/audit`. The AI output can never trigger execution of a non-catalog action.

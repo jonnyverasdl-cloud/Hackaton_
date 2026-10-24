@@ -34,7 +34,7 @@ INCIDENT = {
                   "tactic": "Initial Access", "summary": "Macro attachment delivered to maria.lopez"}],
     "tactics_covered": ["Initial Access"],
     "correlation_reasons": [{"rule": "same_host_window", "detail": "share host WS-FIN-07 within 30 min"}],
-    "signals": [{"name": "Kill chain depth", "detail": "8 tactics covered", "points": 28}],
+    "signals": [{"name": "Kill chain depth", "detail": "8 tactics covered", "points": 30}],
     "ai": {"narrative": "At 14:02 ...", "hypothesis": "Pre-encryption ransomware stage",
            "recommended_actions": ["Isolate WS-FIN-07"], "confidence": 0.9, "generated_by": "stub"},
     "autonomy": "awaiting_approval",
