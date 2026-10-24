@@ -96,3 +96,15 @@ Umbrales: malicious ≥ 70, suspicious 30–69, benign < 30. Mismos que la prác
 
 Todo lo que el sistema hace solo queda en `/audit` con `executed_by: system` y su `reason`.
 Esa es la respuesta a "Audit-First con autonomía": actúa donde se puede deshacer; pregunta donde no.
+
+**Implementado el 24-oct (tarea 3):**
+- `autonomy: "monitoring"`: incidente benign que **sí** tiene técnica ATT&CK (p. ej. el ataque a
+  mitad de replay, score 10–25). No se cierra solo ni ejecuta nada; espera más evidencia. Solo los
+  benign sin ninguna técnica (ruido puro) pasan a `auto_closed`.
+- Cada acción lleva `targets` (hosts, usuarios, dominios...). Se ejecuta una vez por objetivo: si
+  un host nuevo entra al incidente, solo se ejecuta para ese host (queda en `/audit`).
+- Los IDs de incidente son estables al re-correlacionar; si dos se fusionan, queda el menor.
+- `GET /alerts` añade `incident_id` y `suppressed`; `GET /audit` devuelve `entries` y
+  `suppressed_noise` (`count`, `by_type`); `GET /health` devuelve `counts`
+  (`alerts`, `incidents`, `suppressed_noise`, `pending_approvals`). `POST /reset` limpia el estado.
+- `POST /alerts` ignora IDs repetidos (`duplicate: true`), así `--replay` se puede repetir.

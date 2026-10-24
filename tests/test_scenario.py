@@ -125,9 +125,11 @@ def test_replay_posts_all_without_truth(alerts):
     bodies = []
 
     def handler(request):
+        if request.url.path == "/health":
+            return httpx.Response(200, json={"status": "ok"})
         assert request.url.path == "/alerts"
         bodies.append(json.loads(request.content))
-        return httpx.Response(201, json={"ok": True})
+        return httpx.Response(201, json={"duplicate": False})
 
     slept = []
     client = httpx.Client(base_url="http://test", transport=httpx.MockTransport(handler))
@@ -138,3 +140,73 @@ def test_replay_posts_all_without_truth(alerts):
             - datetime.fromisoformat(alerts[0]["timestamp"])).total_seconds()
     assert sum(slept) == pytest.approx(span / 40)
     assert sum(slept) <= 60
+
+
+# --- replay robustness (audit #8) -------------------------------------------
+
+def _client(handler):
+    return httpx.Client(base_url="http://test", transport=httpx.MockTransport(handler))
+
+
+def test_replay_waits_for_health(alerts):
+    calls = {"health": 0}
+
+    def handler(request):
+        if request.url.path == "/health":
+            calls["health"] += 1
+            if calls["health"] < 3:
+                raise httpx.ConnectError("backend still starting")
+            return httpx.Response(200, json={"status": "ok"})
+        return httpx.Response(201, json={"duplicate": False})
+
+    slept = []
+    assert gs.replay(alerts[:2], "http://test", speed=0, client=_client(handler), sleep=slept.append) == 2
+    assert calls["health"] == 3 and slept == [0.5, 0.5]
+
+
+def test_replay_gives_up_when_backend_never_healthy(alerts):
+    def handler(request):
+        return httpx.Response(503)
+
+    with pytest.raises(RuntimeError, match="not healthy"):
+        gs.replay(alerts[:1], "http://test", speed=0, client=_client(handler), sleep=lambda s: None,
+                  health_timeout=2)
+
+
+def test_replay_retries_a_failed_post_once(alerts):
+    posts = []
+
+    def handler(request):
+        if request.url.path == "/health":
+            return httpx.Response(200)
+        posts.append(json.loads(request.content)["id"])
+        if len(posts) == 1:
+            return httpx.Response(502)
+        return httpx.Response(201, json={"duplicate": False})
+
+    assert gs.replay(alerts[:2], "http://test", speed=0, client=_client(handler), sleep=lambda s: None) == 2
+    assert posts == [alerts[0]["id"], alerts[0]["id"], alerts[1]["id"]]
+
+
+def test_replay_stops_after_second_failure(alerts):
+    def handler(request):
+        if request.url.path == "/health":
+            return httpx.Response(200)
+        raise httpx.ConnectError("down")
+
+    with pytest.raises(httpx.ConnectError):
+        gs.replay(alerts[:1], "http://test", speed=0, client=_client(handler), sleep=lambda s: None)
+
+
+def test_replay_does_not_retry_client_errors(alerts):
+    posts = []
+
+    def handler(request):
+        if request.url.path == "/health":
+            return httpx.Response(200)
+        posts.append(1)
+        return httpx.Response(422, json={"detail": "bad"})
+
+    with pytest.raises(httpx.HTTPStatusError):
+        gs.replay(alerts[:1], "http://test", speed=0, client=_client(handler), sleep=lambda s: None)
+    assert posts == [1]

@@ -101,7 +101,8 @@
         "status": {"enum": ["executed", "pending"]},
         "executed_by": {"type": ["string", "null"]},
         "executed_at": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
-        "reason": {"type": "string"}
+        "reason": {"type": "string"},
+        "targets": {"type": "array", "items": {"type": "string"}}
       }
     },
     "incident": {
@@ -138,7 +139,7 @@
         "correlation_reasons": {"type": "array", "items": {"$ref": "#/$defs/correlation_reason"}},
         "signals": {"type": "array", "items": {"$ref": "#/$defs/signal"}},
         "ai": {"$ref": "#/$defs/ai_block"},
-        "autonomy": {"enum": ["auto_closed", "auto_contained", "awaiting_approval"]},
+        "autonomy": {"enum": ["auto_closed", "auto_contained", "awaiting_approval", "monitoring"]},
         "actions": {"type": "array", "items": {"$ref": "#/$defs/action"}},
         "approved_by": {"type": ["string", "null"]},
         "approved_at": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]}

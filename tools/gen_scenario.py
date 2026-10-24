@@ -280,24 +280,62 @@ def dump(alerts: list[dict], path: Path) -> None:
     }, indent=2), encoding="utf-8")
 
 
+def wait_for_health(client, timeout: float = 30, sleep: Callable[[float], None] = time.sleep) -> None:
+    """Poll GET /health until it answers 200, or raise after `timeout` seconds."""
+    import httpx
+
+    waited = 0.0
+    while True:
+        try:
+            if client.get("/health").status_code == 200:
+                return
+        except httpx.TransportError:
+            pass
+        if waited >= timeout:
+            raise RuntimeError(f"backend not healthy after {timeout:.0f} s")
+        sleep(0.5)
+        waited += 0.5
+
+
+def _post_with_retry(client, alert: dict, sleep: Callable[[float], None]):
+    """POST one alert; on a connection error or 5xx, retry once after 1 s."""
+    import httpx
+
+    for attempt in (1, 2):
+        try:
+            r = client.post("/alerts", json=public_view(alert))
+            if r.status_code < 500:
+                r.raise_for_status()
+                return r
+            err: Exception = httpx.HTTPStatusError(f"{r.status_code}", request=r.request, response=r)
+        except httpx.TransportError as exc:
+            err = exc
+        if attempt == 1:
+            sleep(1.0)
+    raise err
+
+
 def replay(alerts: Iterable[dict], base_url: str, speed: float, client=None,
-           sleep: Callable[[float], None] = time.sleep) -> int:
-    """POST each alert to /alerts, sleeping the scenario gap divided by `speed`."""
+           sleep: Callable[[float], None] = time.sleep, health_timeout: float = 30) -> int:
+    """Wait for /health, then POST each alert, sleeping the scenario gap divided by `speed`.
+
+    Safe to re-run: the backend ignores alert ids it has already seen.
+    """
     import httpx
 
     own = client is None
     client = client or httpx.Client(base_url=base_url, timeout=10)
     sent, prev = 0, None
     try:
+        wait_for_health(client, health_timeout, sleep)
         for a in alerts:
             ts = datetime.fromisoformat(a["timestamp"])
             if prev is not None and speed > 0:
                 sleep(max(0.0, (ts - prev).total_seconds() / speed))
             prev = ts
-            r = client.post("/alerts", json=public_view(a))
-            r.raise_for_status()
+            dup = _post_with_retry(client, a, sleep).json().get("duplicate")
             sent += 1
-            print(f"[{sent:02d}] {a['id']} {a['source']:<13} {a['rule']}")
+            print(f"[{sent:02d}] {a['id']} {a['source']:<13} {a['rule']}" + ("  (duplicate, ignored)" if dup else ""))
     finally:
         if own:
             client.close()
