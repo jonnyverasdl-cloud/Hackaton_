@@ -377,7 +377,7 @@ def test_audit4_reopen_reverts_close_and_explains(monkeypatch):
     INCIDENT_SCHEMA.validate(inc)
 
 
-@pytest.mark.parametrize("bad_id", [5, {"a": 1}, "X-1", "ALT-12", "alt-000001", "ALT-900001", "ALT-999999"])
+@pytest.mark.parametrize("bad_id", [5, {"a": 1}, "X-1", "ALT-12", "alt-000001", "ALT-900000", "ALT-900001", "ALT-999999"])
 def test_audit5_client_ids_must_be_alt_format(bad_id):
     c = new_client()
     body = {**gs.public_view(RAW[0]), "id": bad_id}

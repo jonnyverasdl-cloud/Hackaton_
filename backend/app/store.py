@@ -115,6 +115,11 @@ class Store:
 
     # --- AI narration -------------------------------------------------------------
 
+    def _ai_clock(self) -> dict:
+        """Trace time and prompt date from the store clock, so narration is reproducible."""
+        now = self.clock()
+        return {"called_at": now, "today": datetime.fromisoformat(now).date()}
+
     @staticmethod
     def _signature(incident: dict) -> tuple:
         return tuple(incident["alerts"]), incident["verdict"], incident["risk_score"]
@@ -124,7 +129,7 @@ class Store:
             if self._ai_sig.get(incident_id) == self._signature(incident):
                 continue
             if incident["autonomy"] == "auto_closed":  # pure noise: no model call needed
-                incident["ai"] = STUB_NARRATOR.narrate(incident, called_at=self.clock())
+                incident["ai"] = STUB_NARRATOR.narrate(incident, **self._ai_clock())
                 self._ai_sig[incident_id] = self._signature(incident)
             elif self.ai_async:
                 if incident_id not in self._queued:
@@ -152,9 +157,9 @@ class Store:
             # Mark as narrated now, so unrelated ingests during the call don't queue the same work.
             self._ai_sig[incident_id] = self._signature(incident)
             if incident["autonomy"] == "auto_closed":  # became pure noise while queued
-                self.incidents[incident_id]["ai"] = STUB_NARRATOR.narrate(incident, called_at=self.clock())
+                self.incidents[incident_id]["ai"] = STUB_NARRATOR.narrate(incident, **self._ai_clock())
                 return
-        block = self.narrator.narrate(incident, called_at=self.clock())  # outside the lock: may take up to the timeout
+        block = self.narrator.narrate(incident, **self._ai_clock())  # outside the lock: may take up to the timeout
         with self.lock:
             current = self.incidents.get(incident_id)
             if gen != self._gen or current is None:

@@ -335,11 +335,14 @@ def test_no_false_flags_for_cve_hashes_files_and_case(attack_incident):
 
 
 def test_invented_entities_still_flagged_next_to_cves(attack_incident):
-    out = {"narrative": "CVE-2021-40444 on WS-EVIL-99 by john.doe via evil.example", "hypothesis": "",
+    out = {"narrative": ("CVE-2021-40444 on WS-EVIL-99 by john.doe via evil.example; beacons to "
+                         "c2.badsite.de, update-cdn.co.uk and evil.sh as j.smith2."), "hypothesis": "",
            "recommended_actions": [], "confidence": 0.5}
     flags = {(f["type"], f["value"]) for f in verify_entities(out, attack_incident, TODAY)}
     assert flags == {("unknown_host", "WS-EVIL-99"), ("unknown_user", "john.doe"),
-                     ("unknown_domain", "evil.example")}
+                     ("unknown_domain", "evil.example"), ("unknown_domain", "c2.badsite.de"),
+                     ("unknown_domain", "update-cdn.co.uk"), ("unknown_domain", "evil.sh"),
+                     ("unknown_user", "j.smith2")}
 
 
 class GatedClient:

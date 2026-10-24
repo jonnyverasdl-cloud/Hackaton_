@@ -122,10 +122,12 @@ def prompt_hash(prompt: str) -> str:
 _FILE_EXT = tuple("." + e for e in (
     "exe dll sys msi lnk ps1 psm1 bat cmd js vbs hta wsf scr docm docx doc xlsm xlsx xls pptm pptx pdf "
     "txt log csv json xml yml yaml ini cfg conf dat bin tmp iso img zip rar 7z gz tar png jpg gif html htm "
-    "eml msg py sh").split())
+    "eml msg").split())  # not .sh/.py: those are also real TLDs
 _NOT_ENTITY = re.compile(r"\b(?:CVE-\d{4}-\d+|SHA-?\d+|MD5|ALT-\d+|INC-\d+)\b", re.IGNORECASE)
 _FIRST_LAST = re.compile(r"[a-z]+\.[a-z]+", re.IGNORECASE)  # user shape: first.last
-_TLDS = (".example", ".com", ".net", ".org", ".io", ".ru", ".cn", ".info", ".biz", ".xyz", ".top")
+_TLDS = frozenset("example com net org io ru cn info biz xyz top de uk co us su sh me cc tk ml ga cf gq pw "
+                  "online site club app dev ai zip mov ws to".split())
+_CODE_NAMESPACES = ("system.", "microsoft.", "windows.", "net.", "java.", "javax.", "org.apache.")
 _EMAIL = re.compile(r"\b[\w.+-]+@([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b", re.IGNORECASE)
 _IP = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
 _DOTTED = re.compile(r"\b[a-z0-9][a-z0-9_-]*(?:\.[a-z0-9_-]+)+\b", re.IGNORECASE)  # domain, user or file
@@ -167,11 +169,13 @@ def verify_entities(output: dict, incident: dict, today: date | None = None) -> 
             low = token.lower().rstrip(".")
             if low.endswith(_FILE_EXT) or not re.search(r"[a-z]{2}", low):
                 continue  # file names, numbers, "e.g", technique ids: not entities
-            if low.endswith(_TLDS):
-                if low not in domains:
-                    flag("unknown_domain", token, field)
-            elif _FIRST_LAST.fullmatch(low) and low not in users:
-                flag("unknown_user", token, field)  # other dotted tokens (System.Net.WebClient) are code
+            labels = low.split(".")
+            if low in domains or low in users or low.startswith(_CODE_NAMESPACES):
+                continue  # known entity, or code like System.Net.WebClient
+            if labels[-1] in _TLDS or (len(labels) >= 3 and labels[-1].isalpha()):
+                flag("unknown_domain", token, field)  # evil.sh, c2.badsite.de, update-cdn.co.uk
+            elif len(labels) == 2 and re.fullmatch(r"[a-z][a-z0-9_-]*", labels[-1]):
+                flag("unknown_user", token, field)  # john.doe, j.smith2
         text = _DOTTED.sub(" ", text)
         for u in _SVC_USER.findall(text):
             if u.lower() not in users:
@@ -248,12 +252,12 @@ class Narrator:
                 response_mime_type="application/json", response_schema=RESPONSE_SCHEMA))
         return response.text or ""
 
-    def narrate(self, incident: dict, called_at: str | None = None) -> dict:
+    def narrate(self, incident: dict, called_at: str | None = None, today: date | None = None) -> dict:
         """Return the incident's `ai` block: output + generated_by + trace + flags.
 
         `called_at` lets the caller stamp the trace with its own clock (the store's).
         """
-        today = self._today or date.today()
+        today = today or self._today or date.today()
         prompt = build_prompt(incident, today)
         trace = {"model": self.config.model if self.live else "stub", "prompt_sha256": prompt_hash(prompt),
                  "latency_ms": 0, "raw_response": None, "error": None,
