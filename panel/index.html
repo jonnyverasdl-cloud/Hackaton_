@@ -74,7 +74,7 @@ main{flex:1;display:grid;grid-template-columns:minmax(260px,22fr) minmax(300px,2
 .src.edr{background:var(--violet)}.src.proxy{background:var(--blue)}.src.auth{background:var(--cyan)}.src.email_gateway{background:var(--orange)}.src.ids{background:#8a97ab}
 .host{font:600 13px var(--mono)}
 .tag{margin-left:auto;flex:none;font:700 11px var(--mono);padding:1px 6px;border-radius:3px;border:1px solid var(--line2);color:var(--faint)}
-.tag.malicious{color:var(--red);border-color:var(--red)}.tag.suspicious{color:var(--amber);border-color:var(--amber)}.tag.benign{color:var(--green);border-color:#2a6a47}
+.tag.malicious{color:var(--red);border-color:var(--red)}.tag.suspicious{color:var(--amber);border-color:var(--amber)}.tag.benign{color:var(--green);border-color:#2a6a47}.tag.monitoring{color:var(--dim);border-color:var(--line2)}
 .noisebar{padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);font-size:14px;color:var(--dim)}
 .noisebar b{color:var(--text);font-family:var(--mono)}
 /* incidents */
@@ -89,7 +89,7 @@ main{flex:1;display:grid;grid-template-columns:minmax(260px,22fr) minmax(300px,2
 .inc .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--dim);font-size:13px}
 .inc.closed{padding:7px 12px}.inc.closed .ttl{font-size:14px;color:var(--dim);margin:2px 0 4px}.inc.closed .score{font-size:16px}
 .pill{font:800 12px var(--sans);letter-spacing:.06em;padding:3px 8px;border-radius:4px;color:#0a0e14}
-.pill.malicious{background:var(--red)}.pill.suspicious{background:var(--amber)}.pill.benign{background:var(--green)}
+.pill.malicious{background:var(--red)}.pill.suspicious{background:var(--amber)}.pill.benign{background:var(--green)}.pill.monitoring{background:var(--dim)}
 .auto{font:700 11.5px var(--sans);letter-spacing:.05em;padding:3px 7px;border-radius:4px;border:1.5px solid;text-transform:uppercase}
 .auto.auto_closed{color:var(--green);border-color:#2a6a47}.auto.auto_contained{color:var(--amber);border-color:#7a5a12}
 .auto.awaiting_approval{color:#fff;background:var(--red-bg);border-color:var(--red);animation:pulse 2s infinite}
@@ -209,7 +209,7 @@ h3 .hint{text-transform:none;letter-spacing:0;font-weight:500;color:var(--faint)
 const TACTICS=["Reconnaissance","Resource Development","Initial Access","Execution","Persistence","Privilege Escalation","Defense Evasion","Credential Access","Discovery","Lateral Movement","Collection","Command and Control","Exfiltration","Impact"];
 const SHORT={"Reconnaissance":"Recon","Resource Development":"Resource Dev","Initial Access":"Initial Access","Execution":"Execution","Persistence":"Persistence","Privilege Escalation":"Privilege Esc","Defense Evasion":"Defense Evasion","Credential Access":"Credential Access","Discovery":"Discovery","Lateral Movement":"Lateral Movement","Collection":"Collection","Command and Control":"Command & Control","Exfiltration":"Exfiltration","Impact":"Impact"};
 const SRC={edr:"EDR",proxy:"PROXY",auth:"AUTH",email_gateway:"EMAIL",ids:"IDS"};
-const VC={malicious:["var(--red)","var(--red-bg)"],suspicious:["var(--amber)","var(--amber-bg)"],benign:["var(--green)","var(--green-bg)"]};
+const VC={malicious:["var(--red)","var(--red-bg)"],suspicious:["var(--amber)","var(--amber-bg)"],benign:["var(--green)","var(--green-bg)"],monitoring:["var(--dim)","var(--panel2)"]};
 const Q=new URLSearchParams(location.search);
 const MOCK=Q.get("mock")==="1";
 const API=(Q.get("api")||"").replace(/\/$/,"");
@@ -219,6 +219,8 @@ const hms=iso=>iso?String(iso).slice(11,19):"";
 const hm=iso=>iso?String(iso).slice(11,16):"";
 const vcol=v=>(VC[v]||["var(--line2)","var(--panel)"]);
 const autoKey=i=>i.autonomy||(i.status==="approved"?"approved":"monitoring");
+// Display verdict: open incidents still in monitoring are grey, BENIGN (green) only once closed.
+const vkey=i=>i?(i.status!=="closed"&&autoKey(i)==="monitoring"?"monitoring":i.verdict):undefined;
 const localIso=()=>{const d=new Date(),o=-d.getTimezoneOffset(),p=n=>String(Math.floor(Math.abs(n))).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}${o<0?"-":"+"}${p(o/60)}:${p(o%60)}`;};
 const AUTO_TXT={auto_closed:"Closed by system",auto_contained:"Auto-contained",awaiting_approval:"Awaiting approval",approved:"Approved",monitoring:"Monitoring — waiting for more evidence"};
 const LADDER=[["monitoring","Monitoring"],["auto_contained","Auto-contained"],["awaiting_approval","Awaiting approval"],["approved","Approved"]];
@@ -324,7 +326,7 @@ function renderTop(){
 
 function renderAlerts(){
   const box=$("alerts"),als=S.alerts,ids=new Set(als.map(a=>a.alert_id)),verdict={};
-  S.incs.forEach(i=>verdict[i.incident_id]=i.verdict);
+  S.incs.forEach(i=>verdict[i.incident_id]=vkey(i));
   for(const [id,el] of S.shown)if(!ids.has(id)){el.remove();S.shown.delete(id);}
   for(const a of als){
     let el=S.shown.get(a.alert_id);
@@ -340,11 +342,11 @@ function renderAlerts(){
 }
 
 function incCard(i){
-  const [c]=vcol(i.verdict),closed=i.status==="closed",ak=autoKey(i);
+  const vk=vkey(i),[c]=vcol(vk),closed=i.status==="closed",ak=autoKey(i);
   const pend=i.pending_actions?` · ${i.pending_actions}`:"";
   const prevA=S.prevAuto[i.incident_id],bump=prevA&&prevA!==ak&&!closed;if(bump)S.bumpUntil[i.incident_id]=Date.now()+1500;S.prevAuto[i.incident_id]=ak;
   return `<div class="inc ${closed?"closed":""} ${i.incident_id===S.sel?"sel":""}" data-id="${esc(i.incident_id)}" style="--vc:${c}">
-    <div class="r1"><span class="id">${esc(i.incident_id)}</span><span class="pill ${esc(i.verdict)}">${esc(i.verdict).toUpperCase()}</span><span class="score">${i.risk_score}</span></div>
+    <div class="r1"><span class="id">${esc(i.incident_id)}</span><span class="pill ${esc(vk)}">${esc(vk).toUpperCase()}</span><span class="score">${i.risk_score}</span></div>
     <div class="ttl">${esc(i.title)}</div>
     <div class="meta"><span class="auto ${ak} ${(S.bumpUntil[i.incident_id]||0)>Date.now()?"bump":""}">${AUTO_TXT[ak]}${ak==="awaiting_approval"?pend:""}</span><span>${i.alert_count} alerts · ${i.hosts.length} host${i.hosts.length===1?"":"s"}${i.tactics_covered.length?` · ${i.tactics_covered.length} tactics`:""}</span><span class="mono">${hm(i.window?.start)}–${hm(i.window?.end)}</span></div></div>`;
 }
@@ -360,8 +362,8 @@ function renderIncidents(){
 function renderChain(){
   const d=S.detail,cov=new Set(d?.tactics_covered||[]),tech={};
   (d?.timeline||[]).forEach(e=>{if(e.tactic){(tech[e.tactic]??=new Set()).add(e.technique);}});
-  const [c,bg]=vcol(d?.verdict);
-  const sig=JSON.stringify([d?.incident_id,[...cov],d?.verdict,Object.entries(tech).map(([k,v])=>[k,[...v]])]);
+  const vk=vkey(d),[c,bg]=vcol(vk);
+  const sig=JSON.stringify([d?.incident_id,[...cov],vk,Object.entries(tech).map(([k,v])=>[k,[...v]])]);
   if(sig===S.chainSig)return;S.chainSig=sig;
   const prev=S.lit[d?.incident_id]||new Set();
   const label=d?`<b>${esc(d.incident_id)}</b> ${cov.size} of 14 tactics covered${cov.size?"":" · no ATT&CK technique, noise only"}`:"select an incident";
@@ -419,7 +421,7 @@ function renderDetail(){
   if(document.activeElement?.id==="approver")return;
   const sig=JSON.stringify([d,S.approveMsg,S.incs.map(i=>[i.incident_id,i.status,i.hosts])]);if(sig===S.detailSig)return;S.detailSig=sig;
   if(!d){$("dbody").innerHTML=`<div class="empty">${S.incs.length?"Select an incident":"Waiting for incidents…"}</div>`;$("dsub").textContent="";return;}
-  const [c]=vcol(d.verdict),byId=Object.fromEntries(S.alerts.map(a=>[a.alert_id,a]));
+  const vk=vkey(d),[c]=vcol(vk),byId=Object.fromEntries(S.alerts.map(a=>[a.alert_id,a]));
   const users=d.entities.users||[],pend=d.actions.filter(a=>a.status==="pending");
   const ents=[...d.entities.hosts.map(h=>`<span class="ent"><em>host</em>${esc(h)}</span>`),
     ...users.map(u=>`<span class="ent ${/^svc_|^admin/.test(u)?"priv":""}"><em>user</em>${esc(u)}</span>`),
@@ -428,7 +430,7 @@ function renderDetail(){
   const total=d.signals.reduce((n,s)=>n+s.points,0);
   $("dsub").textContent=`${d.incident_id} · ${d.alerts.length} alerts`;
   $("dbody").innerHTML=`<div style="--vc:${c}">
-  <div class="dh"><div style="flex:1"><div class="sub"><span class="mono">${esc(d.incident_id)}</span> · <span class="pill ${esc(d.verdict)}">${esc(d.verdict).toUpperCase()}</span> · <span class="mono">${hms(d.window.start)} → ${hms(d.window.end)}</span> (${mins} min)</div>
+  <div class="dh"><div style="flex:1"><div class="sub"><span class="mono">${esc(d.incident_id)}</span> · <span class="pill ${esc(vk)}">${esc(vk).toUpperCase()}</span> · <span class="mono">${hms(d.window.start)} → ${hms(d.window.end)}</span> (${mins} min)</div>
     <div class="ttl">${esc(d.title)}</div><div class="ents">${ents}</div></div>
     <div class="big"><div class="num">${d.risk_score}</div><div class="of">risk / 100</div><div class="gauge"><i style="left:calc(${Math.min(100,d.risk_score)}% - 1px)"></i></div></div></div>
   ${d.status!=="closed"?ladder(d):""}${statement(d)}
