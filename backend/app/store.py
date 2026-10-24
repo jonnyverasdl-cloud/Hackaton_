@@ -29,7 +29,7 @@ from .ai import AIConfig, Narrator
 from .correlator import build_incident, correlate
 from .normalizer import normalize
 
-CLIENT_ID = re.compile(r"^ALT-\d{6}$")
+CLIENT_ID = re.compile(r"ALT-\d{6}")  # used with fullmatch: no trailing newline
 AUTO_ID_START = 900001  # server-assigned ids live apart from client ids (ALT-9xxxxx)
 
 
@@ -91,7 +91,7 @@ class Store:
         """
         with self.lock:
             rid = raw.get("id")
-            if rid is not None and not (isinstance(rid, str) and CLIENT_ID.match(rid)):
+            if rid is not None and not (isinstance(rid, str) and CLIENT_ID.fullmatch(rid)):
                 raise ValueError("id must be a string like ALT-000123")
             if rid is not None and int(rid[4:]) >= AUTO_ID_START - 1:
                 raise ValueError("ids ALT-900000 and above are reserved for server-assigned ids")

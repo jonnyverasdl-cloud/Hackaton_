@@ -182,10 +182,10 @@ Full tables: [rules only](docs/benchmark-results.md), [with live AI](docs/benchm
 | Attack incident = exactly the 8 attack alerts, malicious | yes | yes | yes |
 | Attack risk score | 90 | 90 | 90 |
 | Malicious at alert # (scenario minutes after first attack alert) | 38 (15.9) | 38 (15.9) | 38 (15.9) |
-| `POST /alerts` median / p95 (ms) | 18.7 / 39.5 | 38.3 / 64.5 | 24.2 / 51.0 |
-| All 50 alerts processed (ms) | 1229 | 2170 | 1470 |
-| AI call latency, gemini-2.5-flash (ms) | 5322 | 4749 | 5456 |
-| AI narrative ready after the last alert (ms) | 12784 | 7580 | 7771 |
+| `POST /alerts` median / p95 (ms) | 23.7 / 60.6 | 24.6 / 59.4 | 37.0 / 66.9 |
+| All 50 alerts processed (ms) | 1628 | 1604 | 1978 |
+| AI call latency, gemini-2.5-flash (ms) | 5688 | 7555 | 6659 |
+| AI narrative ready after the last alert (ms) | 15464 | 10832 | 13310 |
 | AI entities not in the incident (flags) | 0 | 0 | 0 |
 
 The AI rows come from the separate `--ai` run (its rule-side numbers are in its own table).

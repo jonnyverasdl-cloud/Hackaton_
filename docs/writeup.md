@@ -170,9 +170,9 @@ Nothing here is estimated.
 | attack incident correct (exactly the 8 attack alerts, malicious) | yes | yes | yes |
 | risk score | 90 | 90 | 90 |
 | verdict became malicious at alert | #38 | #38 | #38 |
-| `POST /alerts` median / p95 (ms) | 18.7 / 39.5 | 38.3 / 64.5 | 24.2 / 51.0 |
-| model call latency, gemini-2.5-flash (ms) | 5322 | 4749 | 5456 |
-| narrative ready after the last alert (ms) | 12784 | 7580 | 7771 |
+| `POST /alerts` median / p95 (ms) | 23.7 / 60.6 | 24.6 / 59.4 | 37.0 / 66.9 |
+| model call latency, gemini-2.5-flash (ms) | 5688 | 7555 | 6659 |
+| narrative ready after the last alert (ms) | 15464 | 10832 | 13310 |
 | entities outside the incident in the AI text | 0 | 0 | 0 |
 
 In scenario time, the incident becomes malicious 15.9 minutes after the first attack alert — at

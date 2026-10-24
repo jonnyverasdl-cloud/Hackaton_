@@ -377,7 +377,8 @@ def test_audit4_reopen_reverts_close_and_explains(monkeypatch):
     INCIDENT_SCHEMA.validate(inc)
 
 
-@pytest.mark.parametrize("bad_id", [5, {"a": 1}, "X-1", "ALT-12", "alt-000001", "ALT-900000", "ALT-900001", "ALT-999999"])
+@pytest.mark.parametrize("bad_id", [5, {"a": 1}, "X-1", "ALT-12", "alt-000001", "ALT-900000", "ALT-900001",
+                                    "ALT-999999", "ALT-000001\n"])
 def test_audit5_client_ids_must_be_alt_format(bad_id):
     c = new_client()
     body = {**gs.public_view(RAW[0]), "id": bad_id}
@@ -467,3 +468,8 @@ def test_closed_incident_merged_into_open_one_is_reverted(monkeypatch):
     assert close["status"] == "reverted" and close["reason"].startswith("reverted, merged closed incident")
     assert [e["action"] for e in s.audit if e["action"] in ("merge", "reopen")] == ["merge", "reopen"]
     INCIDENT_SCHEMA.validate(inc)
+
+
+def test_highest_client_id_is_accepted():
+    c = new_client()
+    assert c.post("/alerts", json={**gs.public_view(RAW[0]), "id": "ALT-899999"}).status_code == 201

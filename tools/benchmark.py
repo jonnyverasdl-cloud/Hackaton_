@@ -56,7 +56,7 @@ def run_once(client, alerts: list[dict], ai: bool) -> dict:
     attack_ids = {a["id"] for a in alerts if a["_truth"]["attack"]}
     first_attack = next(a for a in alerts if a["id"] in attack_ids)
     post_ms: list[float] = []
-    malicious_after = None  # (alerts posted, wall ms since first attack alert, scenario seconds)
+    malicious_after = None  # (alerts posted, ingest ms from first attack alert, scenario seconds, alert id)
     t0 = time.perf_counter()
     t_first_attack = None
     for n, raw in enumerate(alerts, start=1):
@@ -72,7 +72,8 @@ def run_once(client, alerts: list[dict], ai: bool) -> dict:
                 scen = (datetime.fromisoformat(raw["timestamp"])
                         - datetime.fromisoformat(first_attack["timestamp"])).total_seconds()
                 malicious_after = (n, (time.perf_counter() - t_first_attack) * 1000, scen, raw["id"])
-    total_ms = (time.perf_counter() - t0) * 1000
+    t_last = time.perf_counter()  # right after the last POST
+    total_ms = (t_last - t0) * 1000
 
     summaries = client.get("/incidents").json()
     incidents = [client.get(f"/incidents/{s['incident_id']}").json() for s in summaries]
@@ -88,12 +89,11 @@ def run_once(client, alerts: list[dict], ai: bool) -> dict:
                            and attack[0]["verdict"] == "malicious"),
         "attack_score": attack[0]["risk_score"] if attack else None,
         "malicious_after_alerts": malicious_after[0] if malicious_after else None,
-        "malicious_wall_ms_from_first_attack": malicious_after[1] if malicious_after else None,
+        "ingest_ms_first_attack_to_verdict": malicious_after[1] if malicious_after else None,
         "malicious_scenario_s_from_first_attack": malicious_after[2] if malicious_after else None,
         "malicious_at_alert": malicious_after[3] if malicious_after else None,
     }
     if ai and attack:
-        t_last = time.perf_counter()
         deadline = t_last + AI_WAIT_S
         block = None
         while time.perf_counter() < deadline:
@@ -141,9 +141,12 @@ def render(runs: list[dict], mode: str) -> str:
               "- `post_ms_*`: wall time of one `POST /alerts` (normalize + full re-correlation + actions).",
               "- `malicious_*`: when the attack incident first became malicious; `scenario_s` is from the alerts' "
               "own timestamps (first attack alert to the alert that tipped the verdict).",
+              "- `ingest_ms_first_attack_to_verdict`: processing time to post the alerts from the first attack "
+              "alert up to the one that tipped the verdict, back to back. It is not a detection latency; "
+              "detection in scenario time is `malicious_scenario_s_from_first_attack`.",
               "- `needs_human`: incidents with at least one irreversible action awaiting approval.",
-              "- `ai_*` (only with `--ai`): real model call; `ai_ms_after_last_alert` includes queueing behind "
-              "earlier narrations of the same incident."]
+              "- `ai_*` (only with `--ai`): real model call; `ai_ms_after_last_alert` runs from the last POST and "
+              "includes queueing behind earlier narrations of the same incident."]
     return "\n".join(lines) + "\n"
 
 

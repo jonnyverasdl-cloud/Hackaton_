@@ -40,7 +40,7 @@ def create_app(store: Store | None = None) -> FastAPI:
                 "ai_model": n.config.model if n.live else "stub",
                 "mode": "rules+ai" if n.live else "rules-only",
                 "ai": {"mode": n.config.mode, "reason": n.config.reason or None, "calls": n.calls,
-                       "last_latency_ms": n.last_latency_ms, "last_error": n.last_error},
+                       "last_latency_ms": n.last_latency_ms, "last_error": n.last_error, "warm_up": n.warm},
                 "counts": store.counts()}
 
     @app.post("/alerts", status_code=201)
@@ -83,6 +83,11 @@ def create_app(store: Store | None = None) -> FastAPI:
     @app.get("/audit")
     def audit():
         return store.audit_view()
+
+    @app.post("/ai/warmup")
+    def ai_warmup():
+        """One tiny model call through the server's own client, before the demo starts."""
+        return store.narrator.warm_up()
 
     @app.post("/reset")
     def reset():

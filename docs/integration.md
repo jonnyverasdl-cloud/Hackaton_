@@ -83,7 +83,8 @@ event to the fields above and POST it. Retries are safe because ids are deduplic
 | `GET /incidents/{id}` | full incident per `contracts/incident.schema.json`: timeline, reasons, signals, actions, `ai` |
 | `GET /alerts` | the raw queue, each alert with `incident_id` and `suppressed` |
 | `GET /audit` | everything the system did alone (with `reason`), approvals, AI calls, merges, reopens, plus `suppressed_noise` counts |
-| `GET /health` | mode, AI status, counts |
+| `GET /health` | mode, AI status (incl. last warm-up), counts |
+| `POST /ai/warmup` | one tiny model call through the server's client before a demo (no incident data) |
 
 A ticketing or case-management integration can poll `GET /incidents` and open a case when an
 incident reaches `awaiting_approval`. There are no webhooks yet (**not built**).

@@ -122,17 +122,19 @@ def prompt_hash(prompt: str) -> str:
 _FILE_EXT = tuple("." + e for e in (
     "exe dll sys msi lnk ps1 psm1 bat cmd js vbs hta wsf scr docm docx doc xlsm xlsx xls pptm pptx pdf "
     "txt log csv json xml yml yaml ini cfg conf dat bin tmp iso img zip rar 7z gz tar png jpg gif html htm "
-    "eml msg").split())  # not .sh/.py: those are also real TLDs
+    "eml msg py").split())  # not .sh: a real TLD and a common payload host
 _NOT_ENTITY = re.compile(r"\b(?:CVE-\d{4}-\d+|SHA-?\d+|MD5|ALT-\d+|INC-\d+)\b", re.IGNORECASE)
 _FIRST_LAST = re.compile(r"[a-z]+\.[a-z]+", re.IGNORECASE)  # user shape: first.last
 _TLDS = frozenset("example com net org io ru cn info biz xyz top de uk co us su sh me cc tk ml ga cf gq pw "
-                  "online site club app dev ai zip mov ws to".split())
+                  "online site club app dev ai zip mov ws to onion cloud store shop live link click icu "
+                  "cyou".split())
 _CODE_NAMESPACES = ("system.", "microsoft.", "windows.", "net.", "java.", "javax.", "org.apache.")
 _EMAIL = re.compile(r"\b[\w.+-]+@([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b", re.IGNORECASE)
 _IP = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
 _DOTTED = re.compile(r"\b[a-z0-9][a-z0-9_-]*(?:\.[a-z0-9_-]+)+\b", re.IGNORECASE)  # domain, user or file
 _SVC_USER = re.compile(r"\b(?:svc|adm|admin)_[a-z0-9_]+\b", re.IGNORECASE)
 _HOST = re.compile(r"\b[A-Z]{2,}(?:-[A-Z0-9]+)+\b")
+_HOST_LOWER = re.compile(r"\b[a-z]{2,}(?:-[a-z0-9]+)*-\d+\b")  # ws-fin-99; not "pre-ransomware"
 _TIME = re.compile(r"\b(?:[01]\d|2[0-3]):[0-5]\d\b")
 _DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
 
@@ -174,13 +176,14 @@ def verify_entities(output: dict, incident: dict, today: date | None = None) -> 
                 continue  # known entity, or code like System.Net.WebClient
             if labels[-1] in _TLDS or (len(labels) >= 3 and labels[-1].isalpha()):
                 flag("unknown_domain", token, field)  # evil.sh, c2.badsite.de, update-cdn.co.uk
-            elif len(labels) == 2 and re.fullmatch(r"[a-z][a-z0-9_-]*", labels[-1]):
+            elif (len(labels) == 2 and re.fullmatch(r"[a-z][a-z0-9_-]*", labels[-1])
+                  and not token.split(".")[1][:1].isupper()):  # "password.Then": missing space
                 flag("unknown_user", token, field)  # john.doe, j.smith2
         text = _DOTTED.sub(" ", text)
         for u in _SVC_USER.findall(text):
             if u.lower() not in users:
                 flag("unknown_user", u, field)
-        for h in _HOST.findall(text):
+        for h in _HOST.findall(text) + _HOST_LOWER.findall(text):
             if h.upper() not in hosts:
                 flag("unknown_host", h, field)
         for t in _TIME.findall(text):
@@ -232,6 +235,7 @@ class Narrator:
         self.calls = 0
         self.last_error: str | None = None
         self.last_latency_ms: int | None = None
+        self.warm: dict | None = None
 
     @property
     def live(self) -> bool:
@@ -241,6 +245,34 @@ class Narrator:
         if self._client is None:
             self._client = _vertex_client(self.config)
         return self._client
+
+    def warm_up(self) -> dict:
+        """One tiny model call through this process's client (auth, TLS, model load).
+
+        No incident data is sent. Errors expose only their type, like narrate().
+        """
+        if not self.live:
+            self.warm = {"ok": False, "model": "stub", "latency_ms": 0, "error": self.config.reason or "stub"}
+            return self.warm
+        from google.genai import types
+
+        start = time.perf_counter()
+        pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        error = None
+        try:
+            pool.submit(lambda: self._get_client().models.generate_content(
+                model=self.config.model, contents="Reply with the single word OK.",
+                config=types.GenerateContentConfig(temperature=0))).result(timeout=self.config.timeout_s)
+        except concurrent.futures.TimeoutError:
+            error = f"timeout after {self.config.timeout_s:g} s"
+        except Exception as exc:
+            error = type(exc).__name__
+            log.warning("AI warm-up failed: %s: %s", type(exc).__name__, exc)
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)
+        self.warm = {"ok": error is None, "model": self.config.model,
+                     "latency_ms": int((time.perf_counter() - start) * 1000), "error": error}
+        return self.warm
 
     def _call(self, prompt: str) -> str:
         from google.genai import types

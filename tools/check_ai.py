@@ -8,6 +8,7 @@ values. Exit code 0 when the model answered, 1 when it fell back to the stub.
 """
 from __future__ import annotations
 
+import logging
 import sys
 from pathlib import Path
 
@@ -21,6 +22,10 @@ from tools.gen_scenario import build_scenario, public_view  # noqa: E402
 
 
 def main() -> int:
+    # Error details go to logs/check_ai.log, never to the console (they can name the project).
+    log_dir = Path(__file__).resolve().parent.parent / "logs"
+    log_dir.mkdir(exist_ok=True)
+    logging.basicConfig(filename=log_dir / "check_ai.log", level=logging.WARNING)
     load_dotenv()
     cfg = load_config()
     print(f"AI mode: {cfg.mode}  model: {cfg.model}  location: {cfg.location if cfg.mode == 'vertex' else '-'}")

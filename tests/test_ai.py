@@ -388,3 +388,59 @@ def test_reset_during_call_drops_stale_result_and_audit():
     assert block["generated_by"] == "gemini-test" and block["alerts_covered"] == 8
     assert len(prompts) == len(set(prompts)), "a state was narrated twice after reset"
     assert len(ai_entries) == len(client.calls) - 1  # the pre-reset call left no audit entry
+
+
+# --- follow-up 3: warm-up route, prompt date, prose false positives ----------------
+
+def test_warmup_through_the_backend_client():
+    n, client = narrator(lambda p: Resp("OK"))
+    c = TestClient(create_app(Store(window_min=30, narrator=n)))
+    warm = c.post("/ai/warmup").json()
+    assert warm["ok"] is True and warm["model"] == "gemini-test" and warm["error"] is None
+    assert client.calls and "Incident JSON" not in client.calls[0]["contents"]  # no incident data sent
+    assert c.get("/health").json()["ai"]["warm_up"] == warm
+    assert n.calls == 0  # narration counter untouched
+
+
+def test_warmup_failure_exposes_only_the_type(caplog):
+    def denied(prompt):
+        raise PermissionError(SECRET_ERROR)
+
+    n, _ = narrator(denied)
+    c = TestClient(create_app(Store(window_min=30, narrator=n)))
+    with caplog.at_level("WARNING", logger="storyline.ai"):
+        warm = c.post("/ai/warmup").json()
+    assert warm == {"ok": False, "model": "gemini-test", "latency_ms": warm["latency_ms"], "error": "PermissionError"}
+    assert "demo-proj-123" not in c.get("/health").text and SECRET_ERROR in caplog.text
+
+
+def test_warmup_in_stub_mode_makes_no_call():
+    warm = TestClient(create_app(Store(window_min=30))).post("/ai/warmup").json()
+    assert warm["ok"] is False and warm["model"] == "stub"
+
+
+def test_prompt_date_comes_from_the_store_clock():
+    n, client = narrator(lambda p: Resp(json.dumps(GOOD)))
+    n._today = None
+    s = Store(window_min=30, narrator=n, clock=lambda: "2031-02-03T09:00:00-06:00")
+    for r in RAW:
+        s.ingest(gs.public_view(r))
+    attack = _attack(s)
+    assert all(c["contents"].startswith("Today's date is 2031-02-03.") for c in client.calls)
+    assert attack["ai"]["trace"]["prompt_sha256"] == prompt_hash(build_prompt(attack, date(2031, 2, 3)))
+    assert attack["ai"]["trace"]["called_at"] == "2031-02-03T09:00:00-06:00"
+
+
+def test_prose_without_spaces_and_scripts_not_flagged(attack_incident):
+    text = ("Credentials were sprayed against the password.Then lateral movement followed to the domain.It "
+            "ran loader.py and Office.Interop automation.")
+    out = {"narrative": text, "hypothesis": "", "recommended_actions": [], "confidence": 0.5}
+    assert verify_entities(out, attack_incident, TODAY) == []
+
+
+def test_lowercase_hosts_and_new_tlds_flagged(attack_incident):
+    out = {"narrative": "Then ws-fin-99 and srv-dc-01 reached x.onion and evil.cloud; a pre-ransomware stage.",
+           "hypothesis": "", "recommended_actions": [], "confidence": 0.5}
+    flags = {(f["type"], f["value"]) for f in verify_entities(out, attack_incident, TODAY)}
+    assert flags == {("unknown_host", "ws-fin-99"), ("unknown_host", "srv-dc-01"),
+                     ("unknown_domain", "x.onion"), ("unknown_domain", "evil.cloud")}
