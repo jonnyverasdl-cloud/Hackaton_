@@ -209,7 +209,7 @@ h3 .hint{text-transform:none;letter-spacing:0;font-weight:500;color:var(--faint)
 const TACTICS=["Reconnaissance","Resource Development","Initial Access","Execution","Persistence","Privilege Escalation","Defense Evasion","Credential Access","Discovery","Lateral Movement","Collection","Command and Control","Exfiltration","Impact"];
 const SHORT={"Reconnaissance":"Recon","Resource Development":"Resource Dev","Initial Access":"Initial Access","Execution":"Execution","Persistence":"Persistence","Privilege Escalation":"Privilege Esc","Defense Evasion":"Defense Evasion","Credential Access":"Credential Access","Discovery":"Discovery","Lateral Movement":"Lateral Movement","Collection":"Collection","Command and Control":"Command & Control","Exfiltration":"Exfiltration","Impact":"Impact"};
 const SRC={edr:"EDR",proxy:"PROXY",auth:"AUTH",email_gateway:"EMAIL",ids:"IDS"};
-const VC={malicious:["var(--red)","var(--red-bg)"],suspicious:["var(--amber)","var(--amber-bg)"],benign:["var(--green)","var(--green-bg)"],monitoring:["var(--dim)","var(--panel2)"]};
+const VC={malicious:["var(--red)","var(--red-bg)"],suspicious:["var(--amber)","var(--amber-bg)"],benign:["var(--green)","var(--green-bg)"],monitoring:["var(--dim)","#253246"]};
 const Q=new URLSearchParams(location.search);
 const MOCK=Q.get("mock")==="1";
 const API=(Q.get("api")||"").replace(/\/$/,"");
@@ -220,7 +220,7 @@ const hm=iso=>iso?String(iso).slice(11,16):"";
 const vcol=v=>(VC[v]||["var(--line2)","var(--panel)"]);
 const autoKey=i=>i.autonomy||(i.status==="approved"?"approved":"monitoring");
 // Display verdict: open incidents still in monitoring are grey, BENIGN (green) only once closed.
-const vkey=i=>i?(i.status!=="closed"&&autoKey(i)==="monitoring"?"monitoring":i.verdict):undefined;
+const vkey=i=>i?(i.verdict==="benign"&&i.status!=="closed"&&autoKey(i)==="monitoring"?"monitoring":i.verdict):undefined;
 const localIso=()=>{const d=new Date(),o=-d.getTimezoneOffset(),p=n=>String(Math.floor(Math.abs(n))).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}${o<0?"-":"+"}${p(o/60)}:${p(o%60)}`;};
 const AUTO_TXT={auto_closed:"Closed by system",auto_contained:"Auto-contained",awaiting_approval:"Awaiting approval",approved:"Approved",monitoring:"Monitoring — waiting for more evidence"};
 const LADDER=[["monitoring","Monitoring"],["auto_contained","Auto-contained"],["awaiting_approval","Awaiting approval"],["approved","Approved"]];
@@ -346,9 +346,9 @@ function incCard(i){
   const pend=i.pending_actions?` · ${i.pending_actions}`:"";
   const prevA=S.prevAuto[i.incident_id],bump=prevA&&prevA!==ak&&!closed;if(bump)S.bumpUntil[i.incident_id]=Date.now()+1500;S.prevAuto[i.incident_id]=ak;
   return `<div class="inc ${closed?"closed":""} ${i.incident_id===S.sel?"sel":""}" data-id="${esc(i.incident_id)}" style="--vc:${c}">
-    <div class="r1"><span class="id">${esc(i.incident_id)}</span><span class="pill ${esc(vk)}">${esc(vk).toUpperCase()}</span><span class="score">${i.risk_score}</span></div>
+    <div class="r1"><span class="id">${esc(i.incident_id)}</span><span class="pill ${esc(vk)}" title="verdict: ${esc(i.verdict)}">${esc(vk).toUpperCase()}</span><span class="score">${i.risk_score}</span></div>
     <div class="ttl">${esc(i.title)}</div>
-    <div class="meta"><span class="auto ${ak} ${(S.bumpUntil[i.incident_id]||0)>Date.now()?"bump":""}">${AUTO_TXT[ak]}${ak==="awaiting_approval"?pend:""}</span><span>${i.alert_count} alerts · ${i.hosts.length} host${i.hosts.length===1?"":"s"}${i.tactics_covered.length?` · ${i.tactics_covered.length} tactics`:""}</span><span class="mono">${hm(i.window?.start)}–${hm(i.window?.end)}</span></div></div>`;
+    <div class="meta"><span class="auto ${ak} ${(S.bumpUntil[i.incident_id]||0)>Date.now()?"bump":""}">${vk==="monitoring"&&ak==="monitoring"?"Waiting for more evidence":AUTO_TXT[ak]}${ak==="awaiting_approval"?pend:""}</span><span>${i.alert_count} alerts · ${i.hosts.length} host${i.hosts.length===1?"":"s"}${i.tactics_covered.length?` · ${i.tactics_covered.length} tactics`:""}</span><span class="mono">${hm(i.window?.start)}–${hm(i.window?.end)}</span></div></div>`;
 }
 function renderIncidents(){
   const sig=JSON.stringify([S.incs,S.sel]);if(sig===S.incSig)return;S.incSig=sig;
@@ -430,7 +430,7 @@ function renderDetail(){
   const total=d.signals.reduce((n,s)=>n+s.points,0);
   $("dsub").textContent=`${d.incident_id} · ${d.alerts.length} alerts`;
   $("dbody").innerHTML=`<div style="--vc:${c}">
-  <div class="dh"><div style="flex:1"><div class="sub"><span class="mono">${esc(d.incident_id)}</span> · <span class="pill ${esc(vk)}">${esc(vk).toUpperCase()}</span> · <span class="mono">${hms(d.window.start)} → ${hms(d.window.end)}</span> (${mins} min)</div>
+  <div class="dh"><div style="flex:1"><div class="sub"><span class="mono">${esc(d.incident_id)}</span> · <span class="pill ${esc(vk)}" title="verdict: ${esc(d.verdict)}">${esc(vk).toUpperCase()}</span> · <span class="mono">${hms(d.window.start)} → ${hms(d.window.end)}</span> (${mins} min)</div>
     <div class="ttl">${esc(d.title)}</div><div class="ents">${ents}</div></div>
     <div class="big"><div class="num">${d.risk_score}</div><div class="of">risk / 100</div><div class="gauge"><i style="left:calc(${Math.min(100,d.risk_score)}% - 1px)"></i></div></div></div>
   ${d.status!=="closed"?ladder(d):""}${statement(d)}
@@ -442,7 +442,7 @@ function renderDetail(){
   <h3>Why these alerts are one incident <span class="hint">deterministic rules, verbatim</span></h3>${d.correlation_reasons.map(r=>`<div class="reason"><span class="rule">${esc(r.rule)}</span><span>${esc(r.detail)}</span></div>`).join("")||'<div class="empty">Single alert</div>'}
   <h3>Risk score</h3>${d.signals.map(s=>`<div class="sig"><span>${esc(s.name)}<small>${esc(s.detail)}</small></span><span class="pts">+${s.points}</span></div>`).join("")}
     <div class="sig total"><span>Risk score${total!==d.risk_score?` (sum ${total}, capped)`:""}</span><span class="pts">${d.risk_score}</span></div>
-    <div class="thr">Thresholds: malicious ≥ 70 · suspicious 30–69 · benign &lt; 30${d.signals.length?"":" · no signal fired: noise does not add points"}</div></div>`;
+    <div class="thr">Thresholds: malicious ≥ 70 · suspicious 30–69 · benign &lt; 30${vk==="monitoring"?" · benign + open = MONITORING until closed":""}${d.signals.length?"":" · no signal fired: noise does not add points"}</div></div>`;
 }
 
 const isAi=e=>e.action==="ai_narrative"||String(e.executed_by||"").startsWith("ai:");

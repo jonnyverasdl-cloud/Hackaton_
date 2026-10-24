@@ -101,6 +101,8 @@ Esa es la respuesta a "Audit-First con autonomía": actúa donde se puede deshac
 - `autonomy: "monitoring"`: incidente benign que no es solo ruido conocido (p. ej. el ataque a
   mitad de replay, score 10–25, o actividad `unknown` agrupada). No se cierra solo ni ejecuta nada;
   espera más evidencia. Solo los benign de ruido puro pasan a `auto_closed`.
+  El panel muestra la píldora gris MONITORING para estos incidentes abiertos; BENIGN (verde) solo
+  cuando están cerrados. La API sigue devolviendo `verdict: "benign"`.
 - `autonomy: "approved"` cuando el analista aprobó y no queda nada pendiente. Si un incidente
   cerrado se reabre, `close_benign` queda con `status: "reverted"` y razón.
 - Cada acción lleva `scenario_time` (hora de la alerta que la disparó, la que muestra el panel) y
