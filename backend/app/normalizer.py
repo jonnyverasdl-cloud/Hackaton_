@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
+from datetime import datetime
 
 KNOWN_SCANNER_HOSTS = frozenset({"SCAN-01"})
 KNOWN_SCANNER_ACCOUNTS = frozenset({"svc_nessus"})
@@ -155,6 +156,13 @@ def normalize(raw: dict, alert_id: str | None = None) -> dict:
     source = raw.get("source")
     if source not in _BY_SOURCE:
         raise ValueError(f"unknown alert source: {source!r}")
+    ts = raw.get("timestamp")
+    try:
+        parsed = datetime.fromisoformat(ts) if isinstance(ts, str) else None
+    except ValueError:
+        parsed = None
+    if parsed is None or parsed.tzinfo is None:
+        raise ValueError("timestamp must be ISO 8601 with a UTC offset, e.g. 2026-10-24T14:02:11-06:00")
     severity = _lower(raw.get("severity"))
     alert = {
         "alert_id": alert_id or raw.get("id"),

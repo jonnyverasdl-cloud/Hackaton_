@@ -111,9 +111,11 @@ def test_maria_trap_is_its_own_closed_incident(client):
 def test_every_system_action_is_audited_with_reason(client):
     entries = client.get("/audit").json()["entries"]
     system = [e for e in entries if e["executed_by"] == "system" and e["action"] in actions.CATALOG]
-    assert system and all(e["reason"] for e in system)
+    assert system and all(e["reason"] and e["targets"] and e["at"] and e["scenario_time"] for e in system)
     for s in client.get("/incidents").json():
         for a in full(client, s["incident_id"])["actions"]:
+            if a["status"] == "executed":  # audit #7: every executed action says who and why
+                assert a["executed_by"] and a["reason"] and a["executed_at"]
             if a["executed_by"] == "system":
                 assert any(e["incident_id"] == s["incident_id"] and e["action"] == a["id"] for e in system)
 
@@ -159,7 +161,9 @@ def test_attack_never_auto_closed_while_forming():
 
 
 def _executions(entries):
-    return [(e["incident_id"], e["action"], e["label"]) for e in entries if e["action"] in actions.CATALOG]
+    """(incident, action, target) for every catalog execution in the audit log (audit #7)."""
+    return [(e["incident_id"], e["action"], t) for e in entries if e["action"] in actions.CATALOG
+            for t in e["targets"]]
 
 
 def test_no_action_executed_twice():
@@ -194,10 +198,12 @@ def test_duplicate_alert_ids_ignored():
     assert len(c.get("/alerts").json()) == 1
 
 
-def test_alert_without_id_gets_one():
+def test_alert_without_id_gets_one_from_its_own_range():
     c = new_client()
     body = {k: v for k, v in gs.public_view(RAW[0]).items() if k != "id"}
-    assert c.post("/alerts", json=body).json()["alert_id"] == "ALT-000001"
+    assert c.post("/alerts", json=body).json()["alert_id"] == "ALT-900001"
+    # audit #5: a client's real ALT-000001 is never shadowed by a server-assigned id
+    assert c.post("/alerts", json=gs.public_view(RAW[0])).json()["duplicate"] is False
 
 
 @pytest.mark.parametrize("body", [{}, {"source": "edr"}, {"source": "fax", "timestamp": "2026-10-24T14:00:00-06:00"}])
@@ -267,5 +273,163 @@ def test_only_catalog_actions_and_irreversible_never_auto():
 def test_non_catalog_action_never_executes():
     s = Store(window_min=30)
     incident = {"incident_id": "INC-0001", "verdict": "malicious", "risk_score": 90}
-    s._reconcile(incident, [("wipe_disk", ["WS-FIN-07"])])
+    s._reconcile(incident, [("wipe_disk", ["WS-FIN-07"])], "2026-10-24T14:00:00-06:00")
     assert s.records["INC-0001"] == {} and s.audit == []
+
+
+# --- task 3 follow-up: audit #1-#7, designer points 1-2 ---------------------
+
+def by_step(step):
+    return next(r for r in RAW if r["_truth"].get("step") == step)
+
+
+@pytest.mark.parametrize("ts", ["2026-10-24T14:00:00", "yesterday", 1730000000])
+def test_audit1_bad_timestamp_rejected_and_ingest_keeps_working(ts):
+    c = new_client()
+    c.post("/alerts", json=gs.public_view(RAW[0]))
+    bad = {"id": "ALT-000900", "source": "edr", "timestamp": ts, "rule": "x", "device": "WS-Z"}
+    assert c.post("/alerts", json=bad).status_code == 422
+    assert c.post("/alerts", json=gs.public_view(RAW[1])).status_code == 201
+    assert [a["alert_id"] for a in c.get("/alerts").json()] == [RAW[0]["id"], RAW[1]["id"]]
+
+
+def test_audit1_correlation_failure_rolls_back(monkeypatch):
+    import backend.app.store as store_mod
+    s = Store(window_min=30)
+    s.ingest(gs.public_view(RAW[0]))
+    before = (list(s.alerts), dict(s.incidents), list(s.audit))
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("correlator exploded")
+
+    monkeypatch.setattr(store_mod, "correlate", boom)
+    with pytest.raises(ValueError, match="correlation failed"):
+        s.ingest(gs.public_view(RAW[1]))
+    assert (s.alerts, s.incidents, s.audit) == before and RAW[1]["id"] not in s.by_id
+    monkeypatch.undo()
+    assert s.ingest(gs.public_view(RAW[1]))[1] is False
+
+
+def _rec(s, **kw):
+    rec = s._new_record(kw.pop("id"))
+    rec.update(kw)
+    return rec
+
+
+def test_audit2_merge_keeps_who_when_why():
+    s = Store(window_min=30)
+    s.records = {
+        "INC-0001": {"watchlist_host": _rec(s, id="watchlist_host", done=["WS-A"], executed_by="system",
+                                            executed_at="2026-10-24T10:00:00-06:00", reason="r1")},
+        "INC-0002": {
+            "block_domain": _rec(s, id="block_domain", done=["bad.example"], executed_by="system",
+                                 executed_at="2026-10-24T10:01:00-06:00", reason="malicious, reversible"),
+            "isolate_host": _rec(s, id="isolate_host", pending=["WS-B"],
+                                 pending_reason="irreversible: requires analyst approval"),
+            "watchlist_host": _rec(s, id="watchlist_host", done=["WS-B"], executed_by="system",
+                                   executed_at="2026-10-24T10:01:00-06:00", reason="r2"),
+        },
+    }
+    s._merge("INC-0002", "INC-0001")
+    recs = s.records["INC-0001"]
+    assert recs["block_domain"]["executed_by"] == "system" and recs["block_domain"]["reason"]
+    assert recs["isolate_host"]["pending_reason"] == "irreversible: requires analyst approval"
+    assert recs["watchlist_host"]["done"] == ["WS-A", "WS-B"] and recs["watchlist_host"]["reason"] == "r1"
+    for a in s._render_actions("INC-0001"):
+        assert a["reason"]
+        assert (a["status"] == "pending") == (a["executed_by"] is None)
+
+
+PROXY = {"source": "proxy", "rule": "web", "category": "uncategorized", "domain_age_days": 900,
+         "dest_host": "same.example", "dest_ip": "203.0.113.50"}
+
+
+def _proxy(n, minute, host):
+    return {**PROXY, "id": f"ALT-0007{n:02d}", "timestamp": f"2026-10-24T14:{minute:02d}:00-06:00",
+            "client_host": host, "client_ip": f"10.20.0.{n}"}
+
+
+def test_audit3_unexplained_activity_is_not_auto_closed():
+    s = Store(window_min=30)
+    s.ingest(_proxy(1, 0, "WS-A"))
+    s.ingest(_proxy(2, 1, "WS-B"))
+    (inc,) = s.incidents.values()
+    assert inc["verdict"] == "benign" and inc["status"] == "open" and inc["autonomy"] == "monitoring"
+    assert inc["actions"] == [] and s.audit == []
+
+
+def test_audit4_reopen_reverts_close_and_explains(monkeypatch):
+    s = Store(window_min=30)
+    monkeypatch.setattr(actions, "is_pure_noise", lambda alerts: True)  # pretend: known noise
+    s.ingest(_proxy(1, 0, "WS-A"))
+    s.ingest(_proxy(2, 1, "WS-B"))
+    (inc_id,) = s.incidents
+    assert s.incidents[inc_id]["status"] == "closed"
+    monkeypatch.undo()
+    s.ingest(_proxy(3, 2, "WS-C"))  # new evidence: no longer pure noise
+    inc = s.incidents[inc_id]
+    assert inc["status"] == "open" and inc["autonomy"] == "monitoring"
+    close = next(a for a in inc["actions"] if a["id"] == "close_benign")
+    assert close["status"] == "reverted" and close["reason"].startswith("reverted, new evidence")
+    reopen = [e for e in s.audit if e["action"] == "reopen"]
+    assert len(reopen) == 1 and "now monitoring" in reopen[0]["reason"]
+    assert "raised the verdict" not in reopen[0]["reason"]
+    INCIDENT_SCHEMA.validate(inc)
+
+
+@pytest.mark.parametrize("bad_id", [5, {"a": 1}, "X-1", "ALT-12", "alt-000001"])
+def test_audit5_client_ids_must_be_alt_format(bad_id):
+    c = new_client()
+    body = {**gs.public_view(RAW[0]), "id": bad_id}
+    assert c.post("/alerts", json=body).status_code == 422
+    assert c.get("/alerts").json() == []
+
+
+NEW_HOST_ALERT = {"id": "ALT-000777", "source": "edr", "timestamp": "2026-10-24T14:25:00-06:00",
+                  "rule": "Shadow copy deletion", "severity": "critical", "device": "WS-NEW-01",
+                  "device_ip": "10.20.9.77", "account": "svc_backup", "process": "vssadmin.exe",
+                  "parent_process": "cmd.exe", "command_line": "vssadmin delete shadows /all /quiet"}
+
+
+def test_audit6_new_pending_after_approval_renders_cleanly():
+    c = new_client()
+    replay(c)
+    inc_id = incident_with(c, ATTACK_IDS)["incident_id"]
+    approved = c.post(f"/incidents/{inc_id}/approve", json={"approved_by": "analyst.demo"}).json()
+    assert approved["autonomy"] == "approved" and approved["status"] == "approved"
+    assert c.post("/alerts", json=NEW_HOST_ALERT).json()["incident_id"] == inc_id  # same user, new host
+    inc = full(c, inc_id)
+    INCIDENT_SCHEMA.validate(inc)
+    assert inc["status"] == "open" and inc["autonomy"] == "awaiting_approval"
+    iso = action(inc, "isolate_host")
+    assert iso["status"] == "pending" and iso["executed_by"] is None and iso["executed_at"] is None
+    assert iso["reason"] == "irreversible: requires analyst approval"
+    assert iso["targets"] == ["WS-FIN-07", "SRV-FILES-01", "WS-NEW-01"]
+    # designer point 2: an extension says so
+    watch = action(inc, "watchlist_host")
+    assert watch["reason"].startswith("extended to new target WS-NEW-01;")
+    executions = _executions(c.get("/audit").json()["entries"])
+    assert len(set(executions)) == len(executions)
+
+
+def test_designer1_scenario_time_and_wall_time(client):
+    inc = incident_with(client, ATTACK_IDS)
+    block = action(inc, "block_domain")
+    assert block["scenario_time"] == by_step("A6")["timestamp"]  # malicious was reached at A6
+    assert block["wall_time"] == block["executed_at"] and block["wall_time"] != block["scenario_time"]
+    for a in inc["actions"]:
+        if a["status"] == "pending":
+            assert a["scenario_time"] is None and a["wall_time"] is None
+    entry = next(e for e in client.get("/audit").json()["entries"]
+                 if e["action"] == "block_domain" and e["incident_id"] == inc["incident_id"])
+    assert entry["scenario_time"] == block["scenario_time"] and entry["at"] == block["wall_time"]
+
+
+def test_designer2_extension_reason_in_scenario(client):
+    inc = incident_with(client, ATTACK_IDS)
+    triage = action(inc, "collect_triage")
+    assert triage["reason"] == "extended to new target SRV-FILES-01; malicious incident (score 75), reversible action"
+    entries = [e for e in client.get("/audit").json()["entries"]
+               if e["incident_id"] == inc["incident_id"] and e["action"] == "collect_triage"]
+    assert [e["targets"] for e in entries] == [["WS-FIN-07"], ["SRV-FILES-01"]]
+    assert not entries[0]["reason"].startswith("extended") and entries[1]["reason"].startswith("extended")

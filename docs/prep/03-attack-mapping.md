@@ -81,7 +81,7 @@ Marcar en el panel: "AI-generated narrative — verify against timeline".
 
 | id | Acción | reversible | Se dispara cuando |
 |---|---|---|---|
-| `close_benign` | Cerrar incidente como benigno | sí | verdict benign |
+| `close_benign` | Cerrar incidente como benigno | sí | verdict benign **y** todas las alertas son ruido conocido (benign con técnica o `unknown` → `monitoring`) |
 | `watchlist_host` | Añadir host(s) a watchlist 72 h | sí | suspicious o malicious |
 | `tag_user` | Marcar usuario(s) para revisión | sí | suspicious o malicious |
 | `block_domain` | Bloquear dominio/IP externo en proxy/DNS | sí | malicious con C2 |

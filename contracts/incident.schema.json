@@ -98,11 +98,13 @@
         },
         "label": {"type": "string"},
         "reversible": {"type": "boolean"},
-        "status": {"enum": ["executed", "pending"]},
+        "status": {"enum": ["executed", "pending", "reverted"]},
         "executed_by": {"type": ["string", "null"]},
         "executed_at": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
         "reason": {"type": "string"},
-        "targets": {"type": "array", "items": {"type": "string"}}
+        "targets": {"type": "array", "items": {"type": "string"}},
+        "scenario_time": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+        "wall_time": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]}
       }
     },
     "incident": {
@@ -139,7 +141,7 @@
         "correlation_reasons": {"type": "array", "items": {"$ref": "#/$defs/correlation_reason"}},
         "signals": {"type": "array", "items": {"$ref": "#/$defs/signal"}},
         "ai": {"$ref": "#/$defs/ai_block"},
-        "autonomy": {"enum": ["auto_closed", "auto_contained", "awaiting_approval", "monitoring"]},
+        "autonomy": {"enum": ["auto_closed", "auto_contained", "awaiting_approval", "monitoring", "approved"]},
         "actions": {"type": "array", "items": {"$ref": "#/$defs/action"}},
         "approved_by": {"type": ["string", "null"]},
         "approved_at": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]}

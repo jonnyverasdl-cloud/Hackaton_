@@ -7,7 +7,7 @@ approves. Only catalog ids can ever execute. Each action is tracked per target
 """
 from __future__ import annotations
 
-from . import scoring
+from . import attack, scoring
 
 CATALOG: dict[str, dict] = {
     "close_benign": {"reversible": True, "label": "Close incident as benign (known noise pattern)"},
@@ -36,15 +36,19 @@ def _unique(values) -> list[str]:
     return list(dict.fromkeys(v for v in values if v))
 
 
+def is_pure_noise(alerts: list[dict]) -> bool:
+    """Every alert is a known-noise event type (scan, update, AV cleanup, isolated failed logon)."""
+    return all(attack.is_noise(a["event_type"]) for a in alerts)
+
+
 def plan(incident: dict, alerts: list[dict]) -> list[tuple[str, list[str]]]:
     """(action_id, targets) the incident calls for right now, in display order."""
     verdict = incident["verdict"]
     ents = incident["entities"]
     if verdict == "benign":
-        # Only pure known-noise groups auto-close. A benign incident with an ATT&CK
-        # technique is still forming: the system waits for more evidence (monitoring).
-        has_technique = any(e["technique"] for e in incident["timeline"])
-        return [] if has_technique else [("close_benign", [incident["incident_id"]])]
+        # Only pure known-noise groups auto-close. Anything else that is benign (a forming
+        # attack, unexplained activity) stays open: the system waits for more evidence.
+        return [("close_benign", [incident["incident_id"]])] if is_pure_noise(alerts) else []
 
     out = [("watchlist_host", ents["hosts"]), ("tag_user", ents["users"])]
     if verdict == "malicious":

@@ -98,9 +98,15 @@ Todo lo que el sistema hace solo queda en `/audit` con `executed_by: system` y s
 Esa es la respuesta a "Audit-First con autonomía": actúa donde se puede deshacer; pregunta donde no.
 
 **Implementado el 24-oct (tarea 3):**
-- `autonomy: "monitoring"`: incidente benign que **sí** tiene técnica ATT&CK (p. ej. el ataque a
-  mitad de replay, score 10–25). No se cierra solo ni ejecuta nada; espera más evidencia. Solo los
-  benign sin ninguna técnica (ruido puro) pasan a `auto_closed`.
+- `autonomy: "monitoring"`: incidente benign que no es solo ruido conocido (p. ej. el ataque a
+  mitad de replay, score 10–25, o actividad `unknown` agrupada). No se cierra solo ni ejecuta nada;
+  espera más evidencia. Solo los benign de ruido puro pasan a `auto_closed`.
+- `autonomy: "approved"` cuando el analista aprobó y no queda nada pendiente. Si un incidente
+  cerrado se reabre, `close_benign` queda con `status: "reverted"` y razón.
+- Cada acción lleva `scenario_time` (hora de la alerta que la disparó, la que muestra el panel) y
+  `wall_time` = `executed_at` (reloj real). `/audit` guarda ambos (`scenario_time`, `at`) y `targets`.
+- Ingesta todo-o-nada: timestamp sin zona horaria o ID que no sea `ALT-` + 6 dígitos → 422 sin
+  tocar el estado. Los IDs asignados por el servidor usan `ALT-9xxxxx`.
 - Cada acción lleva `targets` (hosts, usuarios, dominios...). Se ejecuta una vez por objetivo: si
   un host nuevo entra al incidente, solo se ejecuta para ese host (queda en `/audit`).
 - Los IDs de incidente son estables al re-correlacionar; si dos se fusionan, queda el menor.
