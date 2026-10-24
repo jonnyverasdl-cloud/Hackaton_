@@ -3,9 +3,10 @@
 Union-find over alerts. Each rule links pairs of alerts and records why; the
 connected components are the incidents. Rules:
 
-  same_host_window  same host, dt <= window, neither alert is noise
-                    (so isolated auth_failed never joins by host)
-  user_pivot        successful logon on host B whose source is host A -> joins B to A
+  same_host_window  same host, dt <= window, both alerts carry a technique
+                    (noise such as isolated auth_failed, and "unknown", never join by host)
+  user_pivot        successful logon on host B whose source is host A -> joins B to
+                    technique alerts on A within the window before the logon
   shared_infra      same external domain or IP contacted from >= 2 hosts
   same_user_window  same user on different hosts, dt <= 15 min, >= 1 technique alert
   noise_isolation   noise alerts group only with the same noise type on the same host
@@ -81,11 +82,11 @@ def correlate(alerts: list[dict], window_min: int | None = None) -> list[Group]:
     user_window = timedelta(minutes=SAME_USER_WINDOW_MIN)
     alerts = sorted(alerts, key=lambda a: (_ts(a), a["alert_id"]))
     uf = _UnionFind()
-    links: dict[tuple, set[str]] = defaultdict(set)  # (rule, key...) -> alert ids
+    links: list[tuple[tuple, str, str]] = []  # (rule, key...), alert id, alert id
 
     def link(rule_key: tuple, a: dict, b: dict) -> None:
         uf.union(a["alert_id"], b["alert_id"])
-        links[rule_key].update((a["alert_id"], b["alert_id"]))
+        links.append((rule_key, a["alert_id"], b["alert_id"]))
 
     for a in alerts:
         uf.find(a["alert_id"])
@@ -101,7 +102,9 @@ def correlate(alerts: list[dict], window_min: int | None = None) -> list[Group]:
                         and a["event_type"] == b["event_type"]):
                     link(("noise_isolation", a["event_type"], a["host"]), a, b)
                 continue
-            if same_host and dt <= window:
+            # Host alone only joins technique alerts; "unknown" joins by user or infra.
+            both_techniques = attack.has_technique(a["event_type"]) and attack.has_technique(b["event_type"])
+            if same_host and dt <= window and both_techniques:
                 link(("same_host_window", a["host"]), a, b)
             if a["host"] != b["host"]:
                 for ind in sorted(_external_indicators(a) & _external_indicators(b)):
@@ -118,18 +121,22 @@ def correlate(alerts: list[dict], window_min: int | None = None) -> list[Group]:
         if not origin or origin == a["host"]:
             continue
         for b in alerts:
-            if (b["host"] == origin and _ts(b) <= _ts(a) and b is not a
-                    and not attack.is_noise(b["event_type"])):
+            if (b is not a and b["host"] == origin and timedelta(0) <= _ts(a) - _ts(b) <= window
+                    and attack.has_technique(b["event_type"])):
                 link(("user_pivot", a["user"], a["host"], origin), b, a)
 
     by_id = {a["alert_id"]: a for a in alerts}
     members: dict[str, list[str]] = defaultdict(list)
     for a in alerts:
         members[uf.find(a["alert_id"])].append(a["alert_id"])
+    # One reason per (component, rule key): a host with two separate incidents gets two reasons.
+    linked: dict[tuple, set[str]] = defaultdict(set)
+    for rule_key, x, y in links:
+        linked[(uf.find(x), rule_key)].update((x, y))
     reasons_by_root: dict[str, list[dict]] = defaultdict(list)
-    for rule_key in sorted(links, key=lambda k: (min(_ts(by_id[x]) for x in links[k]), str(k))):
-        ids = links[rule_key]
-        reasons_by_root[uf.find(next(iter(ids)))].append(_reason(rule_key, [by_id[x] for x in ids], window))
+    for (root, rule_key), ids in sorted(linked.items(),
+                                        key=lambda kv: (min(_ts(by_id[x]) for x in kv[1]), str(kv[0][1]))):
+        reasons_by_root[root].append(_reason(rule_key, [by_id[x] for x in ids], window))
 
     groups = []
     for root, ids in members.items():

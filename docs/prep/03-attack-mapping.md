@@ -39,6 +39,18 @@ Implementación sugerida: union-find sobre claves de entidad `host:X`, `user:U`,
 `ip:I`. Cada alerta se une a sus entidades; cada regla decide qué entidades se unen entre sí.
 El componente conexo es el incidente. ~80 líneas.
 
+**Notas de implementación (24-oct, tras auditoría):**
+- `same_host_window` solo une alertas que **ambas** tienen técnica. El ruido (incluido `auth_failed`
+  suelto) y `unknown` nunca se unen solo por host; `unknown` puede unirse por usuario
+  (`same_user_window`) o infraestructura compartida (`shared_infra`).
+- `noise_isolation` agrupa ruido del **mismo tipo en el mismo host** dentro de la ventana (no solo
+  escáneres conocidos): así el escaneo, la impresora, los 2 fallos tempranos de `maria.lopez` y el
+  adware quedan como incidentes benignos aparte.
+- `user_pivot` solo une la alerta de logon con alertas con técnica del host origen dentro de la
+  ventana anterior al logon.
+- "Interno" = solo RFC 1918 (10/8, 172.16/12, 192.168/16). `203.0.113.0/24` cuenta como externo
+  (Python `is_private` lo trata como privado, por eso no se usa).
+
 ## Scoring del incidente
 
 | Señal | Puntos | Condición |

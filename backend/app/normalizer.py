@@ -46,6 +46,11 @@ def is_internal_ip(ip: str | None) -> bool:
     return any(addr in net for net in INTERNAL_NETWORKS)
 
 
+def _below(value, limit) -> bool:
+    """value < limit, where a missing value never qualifies (0 does)."""
+    return value is not None and value < limit
+
+
 def _lower(value) -> str:
     return (value or "").lower()
 
@@ -105,7 +110,7 @@ def _auth(raw: dict) -> dict:
     spray = (
         (raw.get("failure_count") or 0) >= SPRAY_MIN_FAILURES
         and (raw.get("distinct_accounts") or 0) >= SPRAY_MIN_ACCOUNTS
-        and (raw.get("window_seconds") or 10**9) <= SPRAY_MAX_SECONDS
+        and _below(raw.get("window_seconds"), SPRAY_MAX_SECONDS + 1)
     )
     # A spray has many target accounts: they stay in raw, never as the alert's user.
     return {
@@ -120,7 +125,7 @@ def _email(raw: dict) -> dict:
     attachment = _lower(raw.get("attachment"))
     if attachment.endswith(MACRO_EXTENSIONS):
         event_type = "email_attachment_macro"
-    elif raw.get("url") and (raw.get("url_domain_age_days") or 10**9) < NEW_DOMAIN_DAYS:
+    elif raw.get("url") and _below(raw.get("url_domain_age_days"), NEW_DOMAIN_DAYS):
         event_type = "email_link_suspicious"
     else:
         event_type = "unknown"

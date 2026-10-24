@@ -1,6 +1,6 @@
 import json
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -11,6 +11,7 @@ from backend.app.correlator import build_incidents, correlate
 from backend.app.normalizer import normalize
 from tools.gen_scenario import build_scenario
 
+WINDOW_MIN = 30  # pinned: scenario tests never depend on CORRELATION_WINDOW_MIN (audit #7)
 SCHEMA = json.loads(
     (Path(__file__).parent.parent / "contracts" / "incident.schema.json").read_text(encoding="utf-8")
 )
@@ -47,7 +48,7 @@ def by_step(raw, alerts):
 
 @pytest.fixture(scope="module")
 def incidents(alerts):
-    return build_incidents(alerts)
+    return build_incidents(alerts, WINDOW_MIN)
 
 
 @pytest.fixture(scope="module")
@@ -219,13 +220,17 @@ def test_incidents_match_schema(incidents):
 def test_input_order_does_not_matter(alerts, incidents):
     shuffled = list(alerts)
     random.Random(7).shuffle(shuffled)
-    assert build_incidents(shuffled) == incidents
+    assert build_incidents(shuffled, WINDOW_MIN) == incidents
 
 
 # --- rules on hand-built alerts ---------------------------------------------
 
+BASE = datetime.fromisoformat("2026-10-24T14:00:00-06:00")
+
+
 def mk(alert_id, minute, event_type="unknown", **fields):
-    alert = {"alert_id": f"ALT-{alert_id:06d}", "timestamp": f"2026-10-24T14:{minute:02d}:00-06:00",
+    """Hand-built normalized alert at 14:00 + `minute` (may be negative or > 59)."""
+    alert = {"alert_id": f"ALT-{alert_id:06d}", "timestamp": (BASE + timedelta(minutes=minute)).isoformat(),
              "source": "edr", "vendor_rule": "test", "host": None, "user": None, "src_ip": None,
              "dst_ip": None, "domain": None, "process": None, "parent_process": None,
              "event_type": event_type, "severity_raw": "low", "raw": {}}
@@ -294,3 +299,65 @@ def test_kill_chain_is_capped():
 def test_privileged_service_account_in_noise_scores_nothing():
     risk, verdict, signals = scoring.score([mk(1, 0, "vuln_scan", host="SCAN-01", user="svc_nessus")], [])
     assert (risk, verdict, signals) == (0, "benign", [])
+
+
+# --- task 2 follow-up (audit #2, #3, #4, #6, #7) ------------------------------
+
+def test_audit2_reasons_are_per_incident_not_per_host():
+    groups = correlate([mk(1, 0, "office_spawn_shell", host="H"), mk(2, 5, "scheduled_task_created", host="H"),
+                        mk(3, 50, "office_spawn_shell", host="H"), mk(4, 55, "scheduled_task_created", host="H")],
+                       WINDOW_MIN)
+    assert [g.alert_ids for g in groups] == [["ALT-000001", "ALT-000002"], ["ALT-000003", "ALT-000004"]]
+    assert [g.reasons for g in groups] == [
+        [{"rule": "same_host_window", "detail": "2 alerts share host H within 30 min (14:00-14:05)"}],
+        [{"rule": "same_host_window", "detail": "2 alerts share host H within 30 min (14:50-14:55)"}],
+    ]
+
+
+def test_audit3_user_pivot_ignores_stale_origin_alerts():
+    groups = correlate([
+        mk(1, -360, "office_spawn_shell", host="WS-A"),   # 08:00, far outside the window
+        mk(2, 0, "scheduled_task_created", host="WS-A"),  # 14:00
+        mk(3, 5, "lateral_logon_new_source", host="SRV-B", user="svc_x", source="auth",
+           raw={"outcome": "success", "src_host": "WS-A"}),
+    ], WINDOW_MIN)
+    assert [g.alert_ids for g in groups] == [["ALT-000001"], ["ALT-000002", "ALT-000003"]]
+
+
+def test_audit4_unknown_on_attack_host_does_not_join_by_host(raw):
+    browsing = {"id": "ALT-000999", "source": "proxy", "timestamp": "2026-10-24T14:10:00-06:00",
+                "rule": "Access to uncategorized website", "severity": "info",
+                "client_host": "WS-FIN-07", "client_ip": "10.20.4.17", "user": None,
+                "dest_host": "only-here-news.example", "dest_ip": "203.0.113.200",
+                "category": "uncategorized", "domain_age_days": 3120}
+    alerts = [normalize(r) for r in raw] + [normalize(browsing)]
+    assert alerts[-1]["event_type"] == "unknown" and alerts[-1]["host"] == "WS-FIN-07"
+    incidents = build_incidents(alerts, WINDOW_MIN)
+    attack_inc = next(inc for inc in incidents if inc["verdict"] == "malicious")
+    assert "ALT-000999" not in attack_inc["alerts"] and len(attack_inc["alerts"]) == 8
+    assert not any("ALT-000999" in inc["alerts"] for inc in incidents)  # lone unknown: no incident
+
+
+def test_audit4_unknown_still_joins_by_user():
+    groups = correlate([mk(1, 0, "office_spawn_shell", host="WS-A", user="u1"),
+                        mk(2, 5, "unknown", host="WS-A", user="u1"),   # same host: not enough
+                        mk(3, 6, "unknown", host="WS-B", user="u1")],  # other host, same user: joins
+                       WINDOW_MIN)
+    assert [g.alert_ids for g in groups] == [["ALT-000001", "ALT-000003"]]
+    assert rules_of(groups) == [{"same_user_window"}]
+
+
+def test_audit6_zero_values_are_not_missing():
+    link = {"id": "ALT-000901", "source": "email_gateway", "timestamp": "2026-10-24T14:00:00-06:00",
+            "rule": "Link to new domain", "recipient": "u1@novabanco.example", "recipient_host": "WS-A",
+            "sender": "x@y.example", "url": "https://fresh.example/login", "url_domain_age_days": 0}
+    assert normalize(link)["event_type"] == "email_link_suspicious"
+    spray = {"id": "ALT-000902", "source": "auth", "timestamp": "2026-10-24T14:00:00-06:00",
+             "rule": "Failed logons", "outcome": "failure", "src_host": "WS-A", "src_ip": "10.20.9.9",
+             "failure_count": 25, "distinct_accounts": 6, "window_seconds": 0}
+    assert normalize(spray)["event_type"] == "auth_spray"
+
+
+def test_audit7_explicit_window_ignores_env(monkeypatch, alerts, incidents):
+    monkeypatch.setenv("CORRELATION_WINDOW_MIN", "5")
+    assert build_incidents(alerts, WINDOW_MIN) == incidents
