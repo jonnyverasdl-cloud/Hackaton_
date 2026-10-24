@@ -1,0 +1,12 @@
+{
+ "status": "ok",
+ "synthetic": true,
+ "ai_model": "gemini-2.5-flash",
+ "mode": "rules+ai",
+ "counts": {
+  "alerts": 50,
+  "incidents": 5,
+  "suppressed_noise": 22,
+  "pending_approvals": 3
+ }
+}

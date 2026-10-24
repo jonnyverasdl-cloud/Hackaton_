@@ -1,0 +1,145 @@
+{
+ "entries": [
+  {
+   "at": "2026-10-24T10:26:07-06:00",
+   "scenario_time": "2026-10-24T13:55:41-06:00",
+   "incident_id": "INC-0001",
+   "action": "close_benign",
+   "label": "Close incident as benign (known noise pattern)",
+   "targets": [
+    "INC-0001"
+   ],
+   "executed_by": "system",
+   "reason": "benign incident (score 0): known noise pattern only"
+  },
+  {
+   "at": "2026-10-24T10:26:08-06:00",
+   "scenario_time": "2026-10-24T13:55:46-06:00",
+   "incident_id": "INC-0002",
+   "action": "close_benign",
+   "label": "Close incident as benign (known noise pattern)",
+   "targets": [
+    "INC-0002"
+   ],
+   "executed_by": "system",
+   "reason": "benign incident (score 0): known noise pattern only"
+  },
+  {
+   "at": "2026-10-24T10:26:16-06:00",
+   "scenario_time": "2026-10-24T14:02:47-06:00",
+   "incident_id": "INC-0004",
+   "action": "close_benign",
+   "label": "Close incident as benign (known noise pattern)",
+   "targets": [
+    "INC-0004"
+   ],
+   "executed_by": "system",
+   "reason": "benign incident (score 0): known noise pattern only"
+  },
+  {
+   "at": "2026-10-24T10:26:18-06:00",
+   "scenario_time": "2026-10-24T14:04:31-06:00",
+   "incident_id": "INC-0005",
+   "action": "close_benign",
+   "label": "Close incident as benign (known noise pattern)",
+   "targets": [
+    "INC-0005"
+   ],
+   "executed_by": "system",
+   "reason": "benign incident (score 0): known noise pattern only"
+  },
+  {
+   "at": "2026-10-24T10:26:26-06:00",
+   "scenario_time": "2026-10-24T14:09:40-06:00",
+   "incident_id": "INC-0003",
+   "action": "watchlist_host",
+   "label": "Add WS-FIN-07 to watchlist (72 h)",
+   "targets": [
+    "WS-FIN-07"
+   ],
+   "executed_by": "system",
+   "reason": "suspicious incident (score 30), reversible action"
+  },
+  {
+   "at": "2026-10-24T10:26:26-06:00",
+   "scenario_time": "2026-10-24T14:09:40-06:00",
+   "incident_id": "INC-0003",
+   "action": "tag_user",
+   "label": "Flag maria.lopez for review",
+   "targets": [
+    "maria.lopez"
+   ],
+   "executed_by": "system",
+   "reason": "suspicious incident (score 30), reversible action"
+  },
+  {
+   "at": "2026-10-24T10:26:26-06:00",
+   "scenario_time": "2026-10-24T14:09:40-06:00",
+   "incident_id": "INC-0003",
+   "action": "collect_triage",
+   "label": "Collect triage package (processes, connections) from WS-FIN-07",
+   "targets": [
+    "WS-FIN-07"
+   ],
+   "executed_by": "system",
+   "reason": "suspicious incident (score 30), reversible action"
+  },
+  {
+   "at": "2026-10-24T10:26:36-06:00",
+   "scenario_time": "2026-10-24T14:18:05-06:00",
+   "incident_id": "INC-0003",
+   "action": "watchlist_host",
+   "label": "Add SRV-FILES-01 to watchlist (72 h)",
+   "targets": [
+    "SRV-FILES-01"
+   ],
+   "executed_by": "system",
+   "reason": "extended to new target SRV-FILES-01; malicious incident (score 75), reversible action"
+  },
+  {
+   "at": "2026-10-24T10:26:36-06:00",
+   "scenario_time": "2026-10-24T14:18:05-06:00",
+   "incident_id": "INC-0003",
+   "action": "tag_user",
+   "label": "Flag svc_backup for review",
+   "targets": [
+    "svc_backup"
+   ],
+   "executed_by": "system",
+   "reason": "extended to new target svc_backup; malicious incident (score 75), reversible action"
+  },
+  {
+   "at": "2026-10-24T10:26:36-06:00",
+   "scenario_time": "2026-10-24T14:18:05-06:00",
+   "incident_id": "INC-0003",
+   "action": "block_domain",
+   "label": "Block cdn-update-sync.example and 203.0.113.77 at proxy/DNS",
+   "targets": [
+    "cdn-update-sync.example",
+    "203.0.113.77"
+   ],
+   "executed_by": "system",
+   "reason": "malicious incident (score 75), reversible action"
+  },
+  {
+   "at": "2026-10-24T10:26:36-06:00",
+   "scenario_time": "2026-10-24T14:18:05-06:00",
+   "incident_id": "INC-0003",
+   "action": "collect_triage",
+   "label": "Collect triage package (processes, connections) from SRV-FILES-01",
+   "targets": [
+    "SRV-FILES-01"
+   ],
+   "executed_by": "system",
+   "reason": "extended to new target SRV-FILES-01; malicious incident (score 75), reversible action"
+  }
+ ],
+ "suppressed_noise": {
+  "count": 22,
+  "by_type": {
+   "unknown": 8,
+   "auth_failed": 8,
+   "system_update": 6
+  }
+ }
+}

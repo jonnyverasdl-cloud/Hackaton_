@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storyline · SOC panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0e14;--panel:#111722;--panel2:#161e2b;--line:#243044;--line2:#2f3d55;
+  --text:#e6edf6;--dim:#93a1b5;--faint:#5f6d82;
+  --red:#ff4d5e;--red-bg:#3a1219;--amber:#ffb627;--amber-bg:#3a2a08;--green:#3ddc84;--green-bg:#0d2e1d;
+  --blue:#4da3ff;--blue-bg:#0d2440;--violet:#b48cff;--cyan:#38d6e0;--orange:#ff8a4c;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;--sans:'Inter',system-ui,Segoe UI,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.45 var(--sans);display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:var(--mono)}
+button{font:inherit;cursor:pointer}
+/* top bar */
+#top{display:flex;align-items:center;gap:12px;padding:8px 16px;background:#0d131c;border-bottom:1px solid var(--line);flex-wrap:nowrap;min-width:0}
+.brand{font-weight:800;font-size:20px;letter-spacing:-.02em}
+.brand span{color:var(--red)}
+.synth{font:700 12px var(--mono);letter-spacing:.06em;white-space:nowrap;color:var(--amber);border:1.5px solid var(--amber);padding:3px 8px;border-radius:4px}
+.funnel{display:flex;align-items:center;gap:4px;margin-left:4px}
+.fstep{display:flex;flex-direction:column;align-items:center;padding:2px 7px;white-space:nowrap;border-radius:6px;background:var(--panel)}
+.fstep b{font:700 20px/1.1 var(--mono)}
+.fstep small{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.fstep.noise b{color:var(--faint)}.fstep.closed b{color:var(--green)}.fstep.wait b{color:var(--red)}
+.farrow{color:var(--faint);font-size:18px}
+.spacer{flex:1}
+.chip{white-space:nowrap;font:600 12px var(--mono);padding:4px 8px;border-radius:4px;background:var(--panel2);color:var(--dim);border:1px solid var(--line)}
+.status{display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:0}
+#conn{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--dim);max-width:340px}
+#conn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#conn i{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:none}
+#conn.ok i{background:var(--green);box-shadow:0 0 8px var(--green)}#conn.err{color:var(--red)}#conn.err i{background:var(--red)}
+.btn{white-space:nowrap;background:var(--panel2);color:var(--text);border:1px solid var(--line2);border-radius:6px;padding:6px 12px;font-weight:600;font-size:14px}
+.btn:hover{border-color:var(--blue)}
+.btn.primary{background:var(--red);border-color:var(--red);color:#fff}
+.btn.primary:hover{filter:brightness(1.1)}
+#prog{height:3px;background:var(--line)}#prog i{display:block;height:100%;width:0;background:var(--blue);transition:width .4s linear}
+/* kill chain */
+#chain{padding:10px 18px 12px;background:#0c1119;border-bottom:1px solid var(--line)}
+#chain .lbl{display:flex;gap:10px;align-items:baseline;font-size:13px;color:var(--dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+#chain .lbl b{color:var(--text);font-family:var(--mono);letter-spacing:0}
+.tactics{display:grid;grid-template-columns:repeat(14,1fr);gap:5px}
+.tac{border:1.5px solid var(--line);border-radius:6px;padding:7px 4px 6px;text-align:center;min-height:66px;display:flex;flex-direction:column;justify-content:space-between;color:var(--faint);background:var(--panel);transition:all .4s}
+.tac .n{font-size:13px;font-weight:700;line-height:1.15}
+.tac .t{font:700 14px var(--mono);min-height:18px}
+.tac.on{color:#fff;border-color:var(--c);background:var(--cbg);box-shadow:0 0 0 1px var(--c) inset}
+.tac.on .t{color:var(--c)}
+.tac.fresh{animation:lit 1.4s ease-out}
+@keyframes lit{0%{transform:scale(1.12);box-shadow:0 0 28px var(--c)}100%{transform:scale(1)}}
+/* columns */
+main{flex:1;display:grid;grid-template-columns:minmax(260px,22fr) minmax(300px,26fr) 52fr;min-height:0}
+.col{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+.col>h2{margin:0;padding:10px 14px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:baseline;font-weight:700}
+.col>h2 b{color:var(--text);font:700 16px var(--mono)}
+.col>h2 .sub{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500}
+.scroll{overflow-y:auto;flex:1;min-height:0}
+.scroll::-webkit-scrollbar{width:8px}.scroll::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
+/* alerts */
+.al{padding:6px 12px;border-bottom:1px solid #1a2333;font-size:14px}
+.al .l1{display:flex;gap:7px;align-items:center;white-space:nowrap;overflow:hidden}
+.al .l1>*{flex:none}.al .l1 .usr{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.al .l2{display:flex;gap:6px;align-items:center;color:var(--dim);font-size:13px}.al .l2 .rl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.al.sup{opacity:.5}
+.al.new{animation:flash 1.6s ease-out}
+@keyframes flash{0%{background:#1f3350}100%{background:transparent}}
+.time{font:500 13px var(--mono);color:var(--dim)}
+.src{font:700 10.5px var(--mono);padding:2px 5px;border-radius:3px;letter-spacing:.04em;color:#0a0e14}
+.src.edr{background:var(--violet)}.src.proxy{background:var(--blue)}.src.auth{background:var(--cyan)}.src.email_gateway{background:var(--orange)}.src.ids{background:#8a97ab}
+.host{font:600 13px var(--mono)}
+.tag{margin-left:auto;flex:none;font:700 11px var(--mono);padding:1px 6px;border-radius:3px;border:1px solid var(--line2);color:var(--faint)}
+.tag.malicious{color:var(--red);border-color:var(--red)}.tag.suspicious{color:var(--amber);border-color:var(--amber)}.tag.benign{color:var(--green);border-color:#2a6a47}
+.noisebar{padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);font-size:14px;color:var(--dim)}
+.noisebar b{color:var(--text);font-family:var(--mono)}
+/* incidents */
+.sect{padding:10px 14px 4px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.inc{margin:6px 10px;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--vc,var(--line2));border-radius:6px;cursor:pointer}
+.inc:hover{border-color:var(--line2)}
+.inc.sel{background:#18233a;border-color:var(--blue);border-left-color:var(--vc)}
+.inc .r1{display:flex;align-items:center;gap:8px}
+.inc .id{font:700 14px var(--mono)}
+.inc .score{margin-left:auto;font:800 22px var(--mono);color:var(--vc)}
+.inc .ttl{font-weight:600;font-size:15px;margin:4px 0 6px;line-height:1.3}
+.inc .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--dim);font-size:13px}
+.inc.closed{padding:7px 12px}.inc.closed .ttl{font-size:14px;color:var(--dim);margin:2px 0 4px}.inc.closed .score{font-size:16px}
+.pill{font:800 12px var(--sans);letter-spacing:.06em;padding:3px 8px;border-radius:4px;color:#0a0e14}
+.pill.malicious{background:var(--red)}.pill.suspicious{background:var(--amber)}.pill.benign{background:var(--green)}
+.auto{font:700 11.5px var(--sans);letter-spacing:.05em;padding:3px 7px;border-radius:4px;border:1.5px solid;text-transform:uppercase}
+.auto.auto_closed{color:var(--green);border-color:#2a6a47}.auto.auto_contained{color:var(--amber);border-color:#7a5a12}
+.auto.awaiting_approval{color:#fff;background:var(--red-bg);border-color:var(--red);animation:pulse 2s infinite}
+.auto.approved{color:var(--blue);border-color:var(--blue)}.auto.monitoring{color:#9fb4d0;border-color:#3a4a63;text-transform:none;letter-spacing:0}
+.auto.bump{animation:bump 1.6s ease-out}@keyframes bump{0%{transform:scale(1.25);box-shadow:0 0 18px currentColor}100%{transform:scale(1)}}
+.ladder{display:flex;gap:4px;margin:10px 0 0;flex-wrap:wrap}.ladder span{font:700 12px var(--sans);letter-spacing:.04em;text-transform:uppercase;padding:5px 10px;border-radius:4px;background:var(--panel);color:var(--faint);border:1px solid var(--line)}
+.ladder span.done{color:var(--dim);border-color:var(--line2)}.ladder span.done:before{content:"✓ "}.ladder span.cur{color:#fff;background:var(--vc);border-color:var(--vc);color:#0a0e14}.ladder i{color:var(--faint);align-self:center;font-style:normal}
+@keyframes pulse{50%{box-shadow:0 0 12px var(--red)}}
+.empty{padding:28px 18px;color:var(--faint);text-align:center;font-size:15px}
+/* detail */
+#detail{border-right:0;position:relative}
+.dbody{padding:14px 20px 40px}
+.dh{display:flex;gap:18px;align-items:flex-start}
+.dh .ttl{font-size:23px;font-weight:700;line-height:1.25;margin:4px 0 8px}
+.dh .sub{color:var(--dim);font-size:14px}
+.big{text-align:center;min-width:120px}
+.big .num{font:800 52px/1 var(--mono);color:var(--vc)}
+.big .of{font:500 14px var(--mono);color:var(--faint)}
+.gauge{position:relative;height:6px;border-radius:3px;margin-top:8px;background:linear-gradient(90deg,var(--green) 0 30%,var(--amber) 30% 70%,var(--red) 70%);opacity:.85}
+.gauge i{position:absolute;top:-4px;width:3px;height:14px;background:#fff;border-radius:2px}
+.statement{margin:12px 0;padding:12px 14px;border-radius:6px;font-size:16px;border:1px solid}
+.statement.closed{background:var(--green-bg);border-color:#2a6a47}.statement.closed b{color:var(--green)}
+.statement.wait{background:var(--red-bg);border-color:#7a2530}.statement.approved{background:var(--blue-bg);border-color:#24507f}
+.statement.mon{background:var(--panel);border-color:var(--line2)}
+.statement .note{display:block;margin-top:6px;font-size:14px;color:var(--dim)}
+.ents{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+.ent{font:600 13px var(--mono);padding:3px 8px;border-radius:4px;background:var(--panel2);border:1px solid var(--line)}
+.ent em{font-style:normal;color:var(--faint);margin-right:5px;font-weight:500}
+.ent.priv{border-color:var(--amber);color:var(--amber)}
+h3{margin:22px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);display:flex;align-items:center;gap:10px;font-weight:700}
+h3 .hint{text-transform:none;letter-spacing:0;font-weight:500;color:var(--faint);font-size:13px}
+.act{display:grid;grid-template-columns:28px 1fr auto;gap:4px 10px;padding:9px 12px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;background:var(--panel);align-items:center}
+.act .ic{font-size:18px;text-align:center}
+.act .lb{font-size:16px;font-weight:600}
+.act .why{grid-column:2/4;font-size:13px;color:var(--dim)}
+.act.pending{border-color:#7a5a12;background:#1d1708}
+.st{font:700 11.5px var(--sans);letter-spacing:.05em;padding:3px 8px;border-radius:4px;text-transform:uppercase;white-space:nowrap}
+.st.sys{background:var(--green-bg);color:var(--green);border:1px solid #2a6a47}
+.st.pend{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber)}
+.st.human{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue)}
+.st.rev{background:var(--panel2);color:var(--dim);border:1px solid var(--line2);text-decoration:line-through}
+.act.reverted .lb{text-decoration:line-through;color:var(--dim)}
+.rc{font:500 11.5px var(--mono);color:var(--faint)}
+.approve{display:flex;gap:8px;align-items:center;margin-top:10px;padding:10px 12px;border-radius:6px;background:#1d1708;border:1px dashed var(--amber)}
+.approve label{font-size:14px;color:var(--dim)}
+.approve input{background:var(--bg);color:var(--text);border:1px solid var(--line2);border-radius:5px;padding:7px 10px;font:600 15px var(--mono);width:180px}
+.approve .btn{font-size:15px;padding:8px 16px;margin-left:auto}
+.approve .msg{color:var(--red);font-size:13px}
+.ai{border:1px solid #3b3270;background:#14122a;border-radius:8px;padding:12px 16px}
+.ai .hd{display:flex;gap:8px;align-items:center;font-size:13px;color:#c9b8ff;font-weight:700;margin-bottom:8px;flex-wrap:wrap}
+.ai p{margin:0 0 10px;font-size:16px;line-height:1.55}
+.ai .hyp{font-size:16px;font-weight:600;color:#fff;border-left:3px solid var(--violet);padding-left:10px}
+.ai ol{margin:6px 0 0;padding-left:22px;font-size:15px}
+.ai.wait .hd{color:var(--dim)}
+.shimmer{height:12px;border-radius:4px;margin:8px 0;background:linear-gradient(90deg,#1e1a3a 0%,#2e2858 50%,#1e1a3a 100%);background-size:200% 100%;animation:sh 1.3s infinite linear}
+@keyframes sh{to{background-position:-200% 0}}
+.tl{position:relative;padding-left:20px}
+.tl:before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--line2)}
+.ev{position:relative;padding:4px 0 12px}
+.ev:before{content:"";position:absolute;left:-19px;top:9px;width:12px;height:12px;border-radius:50%;background:var(--bg);border:2.5px solid var(--vc)}
+.ev .l1{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ev .sum{font-size:16px;margin-top:2px}
+.tech{font:700 13px var(--mono);color:var(--vc)}
+.tactic{font-size:13px;color:var(--dim)}
+.aid{font:500 12px var(--mono);color:var(--faint);margin-left:auto}
+.reason{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #1a2333;align-items:baseline}
+.rule{font:700 12px var(--mono);color:var(--cyan);background:#0b2a2e;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.reason span:last-child{font-size:16px}
+.sig{display:grid;grid-template-columns:1fr auto;padding:6px 0;border-bottom:1px solid #1a2333;font-size:15px}
+.sig small{color:var(--dim);font-size:13px;display:block}
+.sig .pts{font:700 16px var(--mono);color:var(--amber)}
+.sig.total{border-bottom:0;border-top:2px solid var(--line2);font-weight:700}
+.sig.total .pts{color:var(--vc);font-size:20px}
+.thr{font-size:13px;color:var(--faint);margin-top:4px}
+/* audit drawer */
+#audit{position:absolute;top:0;right:0;bottom:0;width:min(520px,100%);background:#0e1420;border-left:2px solid var(--blue);box-shadow:-12px 0 30px #0008;display:none;flex-direction:column;z-index:5}
+#audit.open{display:flex}
+#audit .ah{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);gap:8px}
+#audit .ah b{font-size:16px;white-space:nowrap}
+.aent{padding:9px 16px;border-bottom:1px solid #1a2333}
+.aent .l1{display:flex;gap:8px;align-items:center;overflow:hidden}.aent .l1>*{white-space:nowrap;flex:none}
+.aent .lab{font-size:15px;font-weight:600;margin:2px 0}
+.aent .why{font-size:13px;color:var(--dim)}
+.link{color:var(--blue);cursor:pointer;font:700 13px var(--mono)}
+.supbox{margin:12px 16px;padding:10px 12px;background:var(--panel);border-radius:6px;font-size:15px}
+.supbox .types{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+</style>
+</head>
+<body>
+<header id="top">
+  <div class="brand">Story<span>line</span></div>
+  <div class="synth" title="All data is synthetic: .example domains, documentation IP ranges">SYNTHETIC SCENARIO</div>
+  <div class="funnel" id="funnel"></div>
+  <div class="spacer"></div>
+  <div class="status"><span class="chip" id="mode">…</span><div id="conn"><i></i><span>Connecting…</span></div></div>
+  <button class="btn" id="btnAudit">Audit log</button>
+  <button class="btn" id="btnReplay"></button>
+</header>
+<div id="prog"><i></i></div>
+<section id="chain"></section>
+<main>
+  <div class="col"><h2>Raw alerts <b id="alCount">0</b><span class="sub">newest first</span></h2><div class="noisebar" id="noisebar"></div><div class="scroll" id="alerts"></div></div>
+  <div class="col"><h2>Incidents <b id="incCount">0</b><span class="sub">correlated by rules</span></h2><div class="scroll" id="incidents"></div></div>
+  <div class="col" id="detail"><h2>Incident detail<span class="sub" id="dsub"></span></h2><div class="scroll" id="dscroll"><div class="dbody" id="dbody"><div class="empty">Waiting for incidents…</div></div></div>
+    <aside id="audit"><div class="ah"><b>Audit log</b><span class="hint" style="color:var(--dim);font-size:13px">what the system did alone, and what analysts approved</span><span class="spacer"></span><button class="btn" id="btnAuditClose">Close</button></div><div class="scroll" id="auditBody"></div></aside>
+  </div>
+</main>
+<script>
+"use strict";
+const TACTICS=["Reconnaissance","Resource Development","Initial Access","Execution","Persistence","Privilege Escalation","Defense Evasion","Credential Access","Discovery","Lateral Movement","Collection","Command and Control","Exfiltration","Impact"];
+const SHORT={"Reconnaissance":"Recon","Resource Development":"Resource Dev","Initial Access":"Initial Access","Execution":"Execution","Persistence":"Persistence","Privilege Escalation":"Privilege Esc","Defense Evasion":"Defense Evasion","Credential Access":"Credential Access","Discovery":"Discovery","Lateral Movement":"Lateral Movement","Collection":"Collection","Command and Control":"Command & Control","Exfiltration":"Exfiltration","Impact":"Impact"};
+const SRC={edr:"EDR",proxy:"PROXY",auth:"AUTH",email_gateway:"EMAIL",ids:"IDS"};
+const VC={malicious:["var(--red)","var(--red-bg)"],suspicious:["var(--amber)","var(--amber-bg)"],benign:["var(--green)","var(--green-bg)"]};
+const Q=new URLSearchParams(location.search);
+const MOCK=Q.get("mock")==="1";
+const API=(Q.get("api")||"").replace(/\/$/,"");
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const hms=iso=>iso?String(iso).slice(11,19):"";
+const hm=iso=>iso?String(iso).slice(11,16):"";
+const vcol=v=>(VC[v]||["var(--line2)","var(--panel)"]);
+const autoKey=i=>i.autonomy||(i.status==="approved"?"approved":"monitoring");
+const localIso=()=>{const d=new Date(),o=-d.getTimezoneOffset(),p=n=>String(Math.floor(Math.abs(n))).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}${o<0?"-":"+"}${p(o/60)}:${p(o%60)}`;};
+const AUTO_TXT={auto_closed:"Closed by system",auto_contained:"Auto-contained",awaiting_approval:"Awaiting approval",approved:"Approved",monitoring:"Monitoring — waiting for more evidence"};
+const LADDER=[["monitoring","Monitoring"],["auto_contained","Auto-contained"],["awaiting_approval","Awaiting approval"],["approved","Approved"]];
+
+/* ---------- live API ---------- */
+const live={
+  async get(p){const r=await fetch(API+p,{cache:"no-store"});if(!r.ok)throw new Error(`GET ${p} → ${r.status}`);return r.json();},
+  health(){return this.get("/health");}, alerts(){return this.get("/alerts");}, incidents(){return this.get("/incidents");},
+  incident(id){return this.get("/incidents/"+encodeURIComponent(id));}, audit(){return this.get("/audit");},
+  async approve(id,by){const r=await fetch(API+"/incidents/"+encodeURIComponent(id)+"/approve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({approved_by:by})});
+    if(!r.ok)throw new Error(`approve → ${r.status} ${(await r.text()).slice(0,120)}`);return r.json();},
+  async reset(){const r=await fetch(API+"/reset",{method:"POST"});if(!r.ok)throw new Error(`reset → ${r.status}`);},
+};
+
+/* ---------- mock API: replays real-pipeline snapshots from fixtures/ over ~50 s ---------- */
+const mock={
+  LEAD:1500,DUR:48000,AI_DELAY:3500,
+  async load(){
+    const get=n=>fetch("fixtures/"+n+".json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(n+".json "+r.status);return r.json();});
+    const [rp,al,inc,au,he]=await Promise.all(["replay","alerts","incidents","audit","health"].map(get));
+    this.steps=rp.steps;this.all=al;this.final=Object.fromEntries(inc.map(i=>[i.incident_id,i]));this.auditAll=au.entries;this.h=he;
+    const ts=al.map(a=>Date.parse(a.timestamp)),t0=ts[0],span=(ts[ts.length-1]-t0)||1;
+    this.off=ts.map(x=>this.LEAD+(x-t0)/span*this.DUR);this.restart();
+  },
+  restart(){this.t0=performance.now();this.approvals={};this.apAudit=[];this.aiAt={};},
+  progress(){return Math.min(1,(performance.now()-this.t0)/(this.LEAD+this.DUR));},
+  snap(){
+    const t=performance.now()-this.t0;let k=0;while(k<this.off.length&&this.off[k]<=t)k++;
+    let st=null;for(const s of this.steps){if(s.k<=k)st=s;else break;}
+    const now=performance.now(),lastTs=k?this.all[k-1].timestamp:null;
+    const incs=(st?st.incidents:[]).map(i=>{
+      const f=this.final[i.incident_id],set=new Set(i.alerts);
+      const o={...i,timeline:f.timeline.filter(e=>set.has(e.alert_id)),ai:null,actions:i.actions.map(a=>({...a}))};
+      if(f.ai&&i.alerts.length===f.alerts.length){this.aiAt[i.incident_id]??=now+this.AI_DELAY;if(now>=this.aiAt[i.incident_id])o.ai=f.ai;}
+      const ap=this.approvals[i.incident_id];
+      if(ap){o.actions.forEach(a=>{if(a.status==="pending"){Object.assign(a,{status:"executed",executed_by:ap.by,executed_at:ap.at,wall_time:ap.at,scenario_time:null,reason:"approved by "+ap.by});}});o.status="approved";o.autonomy="approved";o.approved_by=ap.by;o.approved_at=ap.at;}
+      return o;});
+    return {k,incs,lastTs,auditLen:st?st.audit_len:0};
+  },
+  async health(){const s=this.snap(),inc=new Set(s.incs.flatMap(i=>i.alerts));
+    return {...this.h,counts:{alerts:s.k,incidents:s.incs.length,suppressed_noise:s.k-inc.size,pending_approvals:s.incs.reduce((n,i)=>n+i.actions.filter(a=>a.status==="pending").length,0)}};},
+  async alerts(){const s=this.snap(),m={};s.incs.forEach(i=>i.alerts.forEach(a=>m[a]=i.incident_id));
+    return this.all.slice(0,s.k).map(a=>({...a,incident_id:m[a.alert_id]||null,suppressed:!m[a.alert_id]}));},
+  async incidents(){return this.snap().incs.map(summary);},
+  async incident(id){const i=this.snap().incs.find(x=>x.incident_id===id);if(!i)throw new Error("404 "+id);return i;},
+  async audit(){const s=this.snap(),al=await this.alerts(),sup=al.filter(a=>a.suppressed),by={};sup.forEach(a=>by[a.event_type]=(by[a.event_type]||0)+1);
+    return {entries:[...this.auditAll.slice(0,s.auditLen),...this.apAudit],suppressed_noise:{count:sup.length,by_type:by}};},
+  async approve(id,by){const at=localIso(),i=await this.incident(id);if(this.approvals[id]||!i.actions.some(a=>a.status==="pending"))throw new Error("409 nothing pending");
+    i.actions.filter(a=>a.status==="pending").forEach(a=>this.apAudit.push({at,scenario_time:null,incident_id:id,action:a.id,label:a.label,targets:a.targets||[],executed_by:by,reason:"approved by "+by}));
+    this.approvals[id]={by,at};return this.incident(id);},
+  async reset(){this.restart();},
+};
+function summary(i){return {incident_id:i.incident_id,title:i.title,verdict:i.verdict,risk_score:i.risk_score,status:i.status,autonomy:i.autonomy,window:i.window,
+  alert_count:i.alerts.length,hosts:i.entities.hosts,tactics_covered:i.tactics_covered,pending_actions:i.actions.filter(a=>a.status==="pending").length};}
+const api=MOCK?mock:live;
+
+/* ---------- state ---------- */
+const S={prevAuto:{},bumpUntil:{},health:null,alerts:[],incs:[],detail:null,audit:null,sel:null,want:Q.get("sel"),manual:false,err:null,detailSig:"",fetchedSig:"",incSig:"",chainSig:"",lit:{},auditOpen:false,shown:new Map(),busy:false,approveMsg:""};
+let approver="";try{approver=localStorage.getItem("storyline.approver")||"";}catch(e){}
+
+async function tick(){
+  if(S.busy)return;S.busy=true;
+  try{
+    const [h,incs,als]=await Promise.all([api.health(),api.incidents(),api.alerts()]);
+    S.health=h;S.incs=incs;S.alerts=als;
+    pickSelection();
+    if(S.sel){const s=incs.find(i=>i.incident_id===S.sel);const sig=JSON.stringify(s);
+      if(MOCK||sig!==S.fetchedSig||!S.detail||S.detail.incident_id!==S.sel||(!S.detail.ai&&S.detail.verdict!=="benign")){S.detail=await api.incident(S.sel);S.fetchedSig=sig;}}
+    else S.detail=null;
+    if(S.auditOpen)S.audit=await api.audit();
+    S.err=null;
+  }catch(e){S.err=e.message||String(e);}
+  S.busy=false;render();
+}
+function pickSelection(){
+  const has=S.incs.some(i=>i.incident_id===S.sel);
+  if(S.want&&S.incs.some(i=>i.incident_id===S.want)){S.sel=S.want;S.want=null;S.manual=true;return;}
+  if(S.manual&&has)return;
+  if(!S.incs.length){S.sel=null;return;}
+  const best=[...S.incs].sort((a,b)=>(b.risk_score-a.risk_score)||(b.alert_count-a.alert_count))[0];
+  S.sel=best.incident_id;
+}
+
+/* ---------- render ---------- */
+function render(){renderTop();renderAlerts();renderIncidents();renderChain();renderDetail();if(S.auditOpen)renderAudit();}
+
+function renderTop(){
+  const h=S.health,c=h?.counts||{},closed=S.incs.filter(i=>i.autonomy==="auto_closed").length;
+  const steps=[["",c.alerts??0,"alerts in"],["noise",c.suppressed_noise??0,"noise suppressed"],["",c.incidents??0,"incidents"],["closed",closed,"auto-closed"],["wait",c.pending_approvals??0,"await analyst"]];
+  $("funnel").innerHTML=steps.map(([k,n,l],i)=>(i?'<span class="farrow">›</span>':"")+`<div class="fstep ${k}"><b>${n}</b><small>${l}</small></div>`).join("");
+  $("mode").textContent=h?(h.mode==="rules+ai"?`rules+AI · ${h.ai_model}`:"rules only · AI unavailable"):"…";
+  const conn=$("conn");
+  if(S.err){conn.className="err";conn.querySelector("span").textContent=(MOCK?"Fixture error: ":"API unreachable, retrying: ")+S.err+(MOCK?"":" (offline fallback: ?mock=1)");}
+  else{conn.className="ok";conn.querySelector("span").textContent=MOCK?(mock.progress()<1?"Mock replay":"Mock replay · done"):"Live · polling 2 s";}
+  $("prog").firstChild.style.width=MOCK?(mock.progress()*100)+"%":"0";
+  $("btnAudit").textContent=`Audit log${S.audit?` (${S.audit.entries.length})`:""}`;
+}
+
+function renderAlerts(){
+  const box=$("alerts"),als=S.alerts,ids=new Set(als.map(a=>a.alert_id)),verdict={};
+  S.incs.forEach(i=>verdict[i.incident_id]=i.verdict);
+  for(const [id,el] of S.shown)if(!ids.has(id)){el.remove();S.shown.delete(id);}
+  for(const a of als){
+    let el=S.shown.get(a.alert_id);
+    const tag=a.incident_id?`<span class="tag ${verdict[a.incident_id]||""}">${esc(a.incident_id)}</span>`:(a.suppressed?'<span class="tag">NOISE</span>':"");
+    const html=`<div class="l1"><span class="time">${hms(a.timestamp)}</span><span class="src ${esc(a.source)}">${SRC[a.source]||esc(a.source)}</span><span class="host">${esc(a.host||"—")}</span>${a.user?`<span class="time usr">${esc(a.user)}</span>`:""}</div><div class="l2"><span class="rl" title="${esc(a.vendor_rule)}">${esc(a.vendor_rule)}</span>${tag}</div>`;
+    if(!el){el=document.createElement("div");el.className="al new";box.prepend(el);S.shown.set(a.alert_id,el);setTimeout(()=>el.classList.remove("new"),1700);}
+    if(el._h!==html){el.innerHTML=html;el._h=html;}
+    el.classList.toggle("sup",!!a.suppressed);
+  }
+  $("alCount").textContent=als.length;
+  const sup=als.filter(a=>a.suppressed).length,inInc=als.length-sup;
+  $("noisebar").innerHTML=als.length?`<b>${sup}</b> alerts suppressed as noise · <b>${inInc}</b> grouped into incidents`:"Waiting for alerts…";
+}
+
+function incCard(i){
+  const [c]=vcol(i.verdict),closed=i.status==="closed",ak=autoKey(i);
+  const pend=i.pending_actions?` · ${i.pending_actions}`:"";
+  const prevA=S.prevAuto[i.incident_id],bump=prevA&&prevA!==ak&&!closed;if(bump)S.bumpUntil[i.incident_id]=Date.now()+1500;S.prevAuto[i.incident_id]=ak;
+  return `<div class="inc ${closed?"closed":""} ${i.incident_id===S.sel?"sel":""}" data-id="${esc(i.incident_id)}" style="--vc:${c}">
+    <div class="r1"><span class="id">${esc(i.incident_id)}</span><span class="pill ${esc(i.verdict)}">${esc(i.verdict).toUpperCase()}</span><span class="score">${i.risk_score}</span></div>
+    <div class="ttl">${esc(i.title)}</div>
+    <div class="meta"><span class="auto ${ak} ${(S.bumpUntil[i.incident_id]||0)>Date.now()?"bump":""}">${AUTO_TXT[ak]}${ak==="awaiting_approval"?pend:""}</span><span>${i.alert_count} alerts · ${i.hosts.length} host${i.hosts.length===1?"":"s"}${i.tactics_covered.length?` · ${i.tactics_covered.length} tactics`:""}</span><span class="mono">${hm(i.window?.start)}–${hm(i.window?.end)}</span></div></div>`;
+}
+function renderIncidents(){
+  const sig=JSON.stringify([S.incs,S.sel]);if(sig===S.incSig)return;S.incSig=sig;
+  const act=S.incs.filter(i=>i.status!=="closed").sort((a,b)=>b.risk_score-a.risk_score),cl=S.incs.filter(i=>i.status==="closed");
+  $("incCount").textContent=S.incs.length;
+  $("incidents").innerHTML=!S.incs.length?'<div class="empty">No incidents yet. Alerts are being correlated…</div>':
+    `<div class="sect">Needs attention (${act.length})</div>${act.map(incCard).join("")||'<div class="empty" style="padding:10px">Nothing open</div>'}`+
+    (cl.length?`<div class="sect">Closed by system (${cl.length}) · no human needed</div>${cl.map(incCard).join("")}`:"");
+}
+
+function renderChain(){
+  const d=S.detail,cov=new Set(d?.tactics_covered||[]),tech={};
+  (d?.timeline||[]).forEach(e=>{if(e.tactic){(tech[e.tactic]??=new Set()).add(e.technique);}});
+  const [c,bg]=vcol(d?.verdict);
+  const sig=JSON.stringify([d?.incident_id,[...cov],d?.verdict,Object.entries(tech).map(([k,v])=>[k,[...v]])]);
+  if(sig===S.chainSig)return;S.chainSig=sig;
+  const prev=S.lit[d?.incident_id]||new Set();
+  const label=d?`<b>${esc(d.incident_id)}</b> ${cov.size} of 14 tactics covered${cov.size?"":" · no ATT&CK technique, noise only"}`:"select an incident";
+  $("chain").innerHTML=`<div class="lbl">MITRE ATT&amp;CK kill chain · ${label}</div><div class="tactics" style="--c:${c};--cbg:${bg}">`+
+    TACTICS.map(t=>{const on=cov.has(t);const fresh=on&&d&&!prev.has(t)&&S.lit[d.incident_id];
+      return `<div class="tac ${on?"on":""} ${fresh?"fresh":""}" title="${esc(t)}"><span class="n">${esc(SHORT[t])}</span><span class="t">${on?esc([...(tech[t]||[])].join(" ")):""}</span></div>`;}).join("")+"</div>";
+  if(d)S.lit[d.incident_id]=cov;
+}
+
+function statement(d){
+  const sys=d.actions.filter(a=>a.executed_by==="system"),pend=d.actions.filter(a=>a.status==="pending");
+  if(d.status==="closed"){
+    const why=d.actions.find(a=>a.id==="close_benign")?.reason||"benign verdict";
+    const shared=S.incs.filter(o=>o.incident_id!==d.incident_id&&o.status!=="closed"&&o.hosts.some(h=>d.entities.hosts.includes(h)));
+    const note=shared.length?`<span class="note">Shares host ${esc(d.entities.hosts.filter(h=>shared.some(o=>o.hosts.includes(h))).join(", "))} with ${shared.map(o=>esc(o.incident_id)).join(", ")}, but was kept apart: noise alerts never join an incident that has ATT&CK techniques (rule <span class="mono">noise_isolation</span>).</span>`:"";
+    return `<div class="statement closed"><b>Closed by system</b> — no human needed. Reason: ${esc(why)}.${note}</div>`;
+  }
+  if(pend.length&&d.approved_by)return `<div class="statement wait">New irreversible target after the approval by ${esc(d.approved_by)}: <b>${pend.length} action${pend.length===1?"":"s"}</b> wait for an analyst again.</div>`;
+  if(d.autonomy==="approved"||(d.status==="approved"&&!pend.length))return `<div class="statement approved"><b>Approved by ${esc(d.approved_by)}</b> at <span class="mono">${hm(d.approved_at)}</span> (real clock). ${sys.length} reversible actions were run by the system; the irreversible ones ran after analyst approval.</div>`;
+  if(!d.autonomy||d.autonomy==="monitoring")return `<div class="statement mon"><b>Monitoring — waiting for more evidence.</b> ATT&amp;CK technique seen, but score ${d.risk_score} is below 30: no action yet. Re-scored as each alert arrives.</div>`;
+  if(pend.length)return `<div class="statement wait">System already ran <b>${sys.length} reversible action${sys.length===1?"":"s"}</b>. <b>${pend.length} irreversible action${pend.length===1?"":"s"}</b> wait for an analyst.</div>`;
+  return `<div class="statement mon">System ran <b>${sys.length} reversible action${sys.length===1?"":"s"}</b> on its own (auto-contained). Nothing irreversible is needed.</div>`;
+}
+function ladder(d){const cur=LADDER.findIndex(([k])=>k===autoKey(d));
+  return `<div class="ladder" title="Autonomy by blast radius">${LADDER.map(([k,l],n)=>(n?"<i>→</i>":"")+`<span class="${n<cur?"done":n===cur?"cur":""}">${l}</span>`).join("")}</div>`;}
+function actionRow(a){
+  const ic=a.reversible?'<span class="ic" title="Reversible" style="color:var(--green)">↺</span>':'<span class="ic" title="Irreversible" style="color:var(--amber)">⚠</span>';
+  let st,why;
+  if(a.status==="pending"){st='<span class="st pend">Awaiting approval</span>';why=esc(a.reason);}
+  else if(a.status==="reverted"){st='<span class="st rev">Reverted</span>';why=`${a.scenario_time?`was run at <span class="mono">${hms(a.scenario_time)}</span> · `:""}${esc(a.reason)}`;}
+  else if(a.executed_by==="system"){st='<span class="st sys">Auto-executed</span>';why=`by <b>system</b> at <span class="mono">${hms(a.scenario_time||a.executed_at)}</span> · ${esc(a.reason)}`;}
+  else{st='<span class="st human">Approved</span>';why=a.scenario_time?`by <b>${esc(a.executed_by)}</b> at <span class="mono">${hms(a.scenario_time)}</span> · ${esc(a.reason)}`:`by <b>${esc(a.executed_by)}</b> · approved at <span class="mono">${hm(a.wall_time||a.executed_at)}</span> (real clock)${/^approved by /i.test(a.reason||"")?"":" · "+esc(a.reason)}`;}
+  return `<div class="act ${a.status==="pending"?"pending":""} ${a.status==="reverted"?"reverted":""}">${ic}<span class="lb">${esc(a.label)}</span>${st}<span class="why">${why}</span></div>`;
+}
+function aiBlock(d){
+  const ai=d.ai;
+  if(!ai){
+    if(d.status==="closed")return `<div class="ai wait"><div class="hd">No AI narrative · closed by deterministic rules</div></div>`;
+    if(S.health?.mode==="rules-only")return `<div class="ai wait"><div class="hd">AI unavailable, rules only</div><p style="color:var(--dim);font-size:15px;margin:0">The timeline, correlation reasons, score and safe actions below are complete without the AI layer.</p></div>`;
+    return `<div class="ai wait"><div class="hd">AI writing narrative…</div><div class="shimmer"></div><div class="shimmer" style="width:85%"></div><div class="shimmer" style="width:60%"></div></div>`;
+  }
+  const stub=ai.generated_by==="stub";
+  return `<div class="ai"><div class="hd">✦ AI-generated — verify against timeline <span class="chip">${esc(ai.generated_by)}</span>${ai.confidence!=null?`<span class="chip">confidence ${Math.round(ai.confidence*100)}%</span>`:""}${stub?'<span class="st pend">AI unavailable, rules only</span>':""}</div>
+    ${ai.hypothesis?`<p class="hyp">${esc(ai.hypothesis)}</p>`:""}${ai.narrative?`<p>${esc(ai.narrative)}</p>`:""}
+    ${ai.recommended_actions?.length?`<div class="hd" style="margin:4px 0 0">Recommended (suggestions only; only catalog actions execute)</div><ol>${ai.recommended_actions.map(r=>`<li>${esc(r)}</li>`).join("")}</ol>`:""}</div>`;
+}
+function renderDetail(){
+  const d=S.detail;
+  if(document.activeElement?.id==="approver")return;
+  const sig=JSON.stringify([d,S.approveMsg,S.incs.map(i=>[i.incident_id,i.status,i.hosts])]);if(sig===S.detailSig)return;S.detailSig=sig;
+  if(!d){$("dbody").innerHTML=`<div class="empty">${S.incs.length?"Select an incident":"Waiting for incidents…"}</div>`;$("dsub").textContent="";return;}
+  const [c]=vcol(d.verdict),byId=Object.fromEntries(S.alerts.map(a=>[a.alert_id,a]));
+  const users=d.entities.users||[],pend=d.actions.filter(a=>a.status==="pending");
+  const ents=[...d.entities.hosts.map(h=>`<span class="ent"><em>host</em>${esc(h)}</span>`),
+    ...users.map(u=>`<span class="ent ${/^svc_|^admin/.test(u)?"priv":""}"><em>user</em>${esc(u)}</span>`),
+    ...(d.entities.domains||[]).map(x=>`<span class="ent"><em>domain</em>${esc(x)}</span>`),...(d.entities.ips||[]).map(x=>`<span class="ent"><em>ip</em>${esc(x)}</span>`)].join("");
+  const mins=Math.round((Date.parse(d.window.end)-Date.parse(d.window.start))/60000);
+  const total=d.signals.reduce((n,s)=>n+s.points,0);
+  $("dsub").textContent=`${d.incident_id} · ${d.alerts.length} alerts`;
+  $("dbody").innerHTML=`<div style="--vc:${c}">
+  <div class="dh"><div style="flex:1"><div class="sub"><span class="mono">${esc(d.incident_id)}</span> · <span class="pill ${esc(d.verdict)}">${esc(d.verdict).toUpperCase()}</span> · <span class="mono">${hms(d.window.start)} → ${hms(d.window.end)}</span> (${mins} min)</div>
+    <div class="ttl">${esc(d.title)}</div><div class="ents">${ents}</div></div>
+    <div class="big"><div class="num">${d.risk_score}</div><div class="of">risk / 100</div><div class="gauge"><i style="left:calc(${Math.min(100,d.risk_score)}% - 1px)"></i></div></div></div>
+  ${d.status!=="closed"?ladder(d):""}${statement(d)}
+  ${d.actions.length?`<h3>Response actions <span class="hint">↺ reversible: system runs it alone · ⚠ irreversible: analyst decides</span></h3>${d.actions.map(actionRow).join("")}
+    ${pend.length?`<div class="approve"><label for="approver">Analyst</label><input id="approver" value="${esc(approver)}" placeholder="your name" autocomplete="off"><span class="msg">${esc(S.approveMsg)}</span><button class="btn primary" id="btnApprove">Approve ${pend.length} irreversible action${pend.length===1?"":"s"}</button></div>`:""}`:""}
+  ${d.verdict!=="benign"||d.ai?`<h3>Narrative</h3>${aiBlock(d)}`:""}
+  <h3>Timeline <span class="hint">${d.timeline.length} alerts, chronological</span></h3><div class="tl">${d.timeline.map(e=>{const a=byId[e.alert_id]||{};
+    return `<div class="ev"><div class="l1"><span class="time">${hms(e.timestamp)}</span>${a.source?`<span class="src ${esc(a.source)}">${SRC[a.source]||esc(a.source)}</span>`:""}<span class="host">${esc(a.host||"")}</span>${a.user?`<span class="time">${esc(a.user)}</span>`:""}${e.technique?`<span class="tech">${esc(e.technique)}</span><span class="tactic">${esc(e.tactic)}</span>`:'<span class="tactic">no technique (noise)</span>'}<span class="aid">${esc(e.alert_id)}</span></div><div class="sum">${esc(e.summary)}</div></div>`;}).join("")}</div>
+  <h3>Why these alerts are one incident <span class="hint">deterministic rules, verbatim</span></h3>${d.correlation_reasons.map(r=>`<div class="reason"><span class="rule">${esc(r.rule)}</span><span>${esc(r.detail)}</span></div>`).join("")||'<div class="empty">Single alert</div>'}
+  <h3>Risk score</h3>${d.signals.map(s=>`<div class="sig"><span>${esc(s.name)}<small>${esc(s.detail)}</small></span><span class="pts">+${s.points}</span></div>`).join("")}
+    <div class="sig total"><span>Risk score${total!==d.risk_score?` (sum ${total}, capped)`:""}</span><span class="pts">${d.risk_score}</span></div>
+    <div class="thr">Thresholds: malicious ≥ 70 · suspicious 30–69 · benign &lt; 30${d.signals.length?"":" · no signal fired: noise does not add points"}</div></div>`;
+}
+
+function renderAudit(){
+  const a=S.audit;if(!a){$("auditBody").innerHTML='<div class="empty">Loading…</div>';return;}
+  const sn=a.suppressed_noise||{count:0,by_type:{}};
+  const html=`<div class="supbox"><b class="mono">${sn.count}</b> alerts suppressed as noise, kept out of every incident<div class="types">${Object.entries(sn.by_type).map(([k,v])=>`<span class="chip">${esc(k)} ×${v}</span>`).join("")}</div></div>`+
+    ([...a.entries].reverse().map(e=>`<div class="aent"><div class="l1">${e.scenario_time?`<span class="time" style="color:var(--text)">${hms(e.scenario_time)}</span><span class="rc">real ${hms(e.at)}</span>`:`<span class="time">${hms(e.at)}</span><span class="rc">real clock</span>`}<span class="link" data-id="${esc(e.incident_id)}">${esc(e.incident_id)}</span>${e.action==="merge"||e.action==="reopen"?`<span class="chip">${esc(e.action)}</span>`:e.executed_by==="system"?'<span class="st sys">System, alone</span>':`<span class="st human">Approved by ${esc(e.executed_by)}</span>`}${e.action==="merge"||e.action==="reopen"?"":`<span class="aid">${esc(e.action)}</span>`}</div><div class="lab">${esc(e.label)}</div><div class="why">${esc(e.reason)}</div></div>`).join("")||'<div class="empty">The system has not acted yet.</div>');
+  if($("auditBody")._h!==html){$("auditBody").innerHTML=html;$("auditBody")._h=html;}
+}
+
+/* ---------- events ---------- */
+$("incidents").addEventListener("click",e=>{const c=e.target.closest(".inc");if(!c)return;S.sel=c.dataset.id;S.manual=true;S.approveMsg="";S.detail=null;tick();});
+$("auditBody").addEventListener("click",e=>{const l=e.target.closest(".link");if(!l)return;S.sel=l.dataset.id;S.manual=true;S.detail=null;S.auditOpen=false;$("audit").classList.remove("open");tick();});
+$("btnAudit").onclick=()=>{S.auditOpen=!S.auditOpen;$("audit").classList.toggle("open",S.auditOpen);if(S.auditOpen){renderAudit();tick();}};
+$("btnAuditClose").onclick=()=>{S.auditOpen=false;$("audit").classList.remove("open");};
+$("dbody").addEventListener("input",e=>{if(e.target.id==="approver"){approver=e.target.value;try{localStorage.setItem("storyline.approver",approver);}catch(_){}}});
+$("dbody").addEventListener("keydown",e=>{if(e.target.id==="approver"&&e.key==="Enter")doApprove();});
+$("dbody").addEventListener("click",e=>{if(e.target.id==="btnApprove")doApprove();});
+async function doApprove(){
+  const who=approver.trim(),inp=$("approver");
+  if(!who){S.approveMsg="Enter your name to sign the approval";inp?.blur();S.detailSig="";renderDetail();$("approver")?.focus();return;}
+  const btn=$("btnApprove");if(btn){btn.disabled=true;btn.textContent="Approving…";}
+  try{S.detail=await api.approve(S.sel,who);S.approveMsg="";}catch(err){S.approveMsg=err.message;}
+  inp?.blur();S.detailSig="";S.incSig="";await tick();
+}
+let armed=0;
+$("btnReplay").textContent=MOCK?"Replay":"Reset";
+$("btnReplay").title=MOCK?"Restart the offline replay from fixtures":"POST /reset: clears in-memory state before re-running the replay";
+$("btnReplay").onclick=async()=>{
+  if(!MOCK&&Date.now()-armed>3000){armed=Date.now();$("btnReplay").textContent="Click again to reset";setTimeout(()=>$("btnReplay").textContent="Reset",3000);return;}
+  try{await api.reset();}catch(e){S.err=e.message;}
+  $("btnReplay").textContent=MOCK?"Replay":"Reset";
+  for(const el of S.shown.values())el.remove();S.shown.clear();
+  Object.assign(S,{sel:null,manual:false,detail:null,audit:null,lit:{},incSig:"",detailSig:"",chainSig:"",fetchedSig:"",approveMsg:""});tick();
+};
+
+(async()=>{
+  if(Q.get("audit")==="1"){S.auditOpen=true;$("audit").classList.add("open");}
+  if(MOCK){try{await mock.load();}catch(e){S.err=e.message+" (serve the repo over http; file:// cannot fetch fixtures)";render();return;}}
+  tick();setInterval(tick,MOCK?500:2000);
+})();
+</script>
+</body>
+</html>
