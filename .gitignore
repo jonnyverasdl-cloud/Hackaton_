@@ -8,3 +8,5 @@ evidence/
 .vscode/
 .DS_Store
 Thumbs.db
+*credentials*.json
+*key*.json

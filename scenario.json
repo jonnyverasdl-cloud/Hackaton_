@@ -670,7 +670,7 @@
       "logon_type": 3,
       "src_host": "WS-FIN-07",
       "src_ip": "10.20.4.17",
-      "target_host": "DC-01",
+      "target_host": null,
       "account": null,
       "failure_count": 40,
       "distinct_accounts": 12,

@@ -50,6 +50,12 @@ def test_attack_times_and_sources_match_spec(alerts):
     assert "vssadmin delete shadows" in by_step["A8"]["command_line"]
 
 
+def test_spray_shares_no_target_host_with_noise(alerts):
+    a5 = next(a for a in alerts if a["_truth"].get("step") == "A5")
+    assert a5["src_host"] == "WS-FIN-07" and a5["target_host"] is None
+    assert a5["distinct_accounts"] == len(a5["target_accounts"]) == 12
+
+
 def test_noise_breakdown(alerts):
     noise = Counter(a["_truth"]["noise"] for a in alerts if not a["_truth"]["attack"])
     assert noise == {"vuln_scan": 12, "auth_failed": 10, "system_update": 6,

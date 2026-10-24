@@ -72,3 +72,8 @@ def test_bad_incident_rejected(patch):
 
 def test_unknown_event_type_rejected():
     assert list(validator("alert").iter_errors({**ALERT, "event_type": "made_up"}))
+
+
+@pytest.mark.parametrize("bad", ["not-a-date", "2026-10-24 14:06", "2026-13-24T14:06:00-06:00"])
+def test_bad_timestamp_rejected(bad):
+    assert list(validator("alert").iter_errors({**ALERT, "timestamp": bad}))

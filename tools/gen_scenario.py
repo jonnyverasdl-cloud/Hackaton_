@@ -7,6 +7,10 @@ Each alert is a *raw* vendor-style record (field names differ per source, the
 normalizer maps them). The `_truth` key is ground truth for tests only; it is
 stripped before an alert is posted to the API.
 
+Auth host rule: a successful logon belongs to `target_host` (A6: SRV-FILES-01);
+a failure/spray belongs to `src_host` (A5: WS-FIN-07). A5 has no target host:
+it hit 12 accounts, kept only in `raw.target_accounts`, never as entities.
+
 Usage:
     python tools/gen_scenario.py --dump [PATH]           # write scenario.json
     python tools/gen_scenario.py --replay --speed 40     # POST /alerts, compressed time
@@ -105,7 +109,7 @@ def _attack(day: date) -> list[dict]:
             "source": "auth", "timestamp": _ts(day, "14:15", 20),
             "rule": "Multiple failed logons from single source", "severity": "high",
             "outcome": "failure", "logon_type": 3,
-            "src_host": fin, "src_ip": HOST_IPS[fin], "target_host": "DC-01",
+            "src_host": fin, "src_ip": HOST_IPS[fin], "target_host": None,
             "account": None, "failure_count": 40, "distinct_accounts": 12, "window_seconds": 90,
             "target_accounts": [
                 "svc_backup", "svc_sql", "svc_web", "admin.ops", "jose.ramirez", "ana.torres",
