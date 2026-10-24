@@ -47,7 +47,25 @@
    }
   ],
   "signals": [],
-  "ai": null,
+  "ai": {
+   "narrative": "At 13:55, Failed logon on WS-FIN-07 (maria.lopez). At 13:55, Failed logon on WS-FIN-07 (maria.lopez).",
+   "hypothesis": "Isolated failed logons on WS-FIN-07 (benign, score 0).",
+   "recommended_actions": [
+    "Close incident as benign (known noise pattern)"
+   ],
+   "confidence": 0.0,
+   "generated_by": "stub",
+   "trace": {
+    "model": "stub",
+    "prompt_sha256": "51ff90b9f7fbec0a10d019ccdeabb650b61056b256b349f9cf3357abb94763b9",
+    "latency_ms": 0,
+    "raw_response": null,
+    "error": "pure noise: closed by rules, no AI call",
+    "called_at": "2026-10-24T10:53:06-06:00"
+   },
+   "flags": [],
+   "alerts_covered": 2
+  },
   "autonomy": "auto_closed",
   "actions": [
    {
@@ -196,7 +214,25 @@
    }
   ],
   "signals": [],
-  "ai": null,
+  "ai": {
+   "narrative": "At 13:52, Vulnerability scan detected on SCAN-01 (svc_nessus). At 13:55, Vulnerability scan detected on SCAN-01 (svc_nessus). At 13:58, Vulnerability scan detected on SCAN-01 (svc_nessus). At 14:01, Vulnerability scan detected on SCAN-01 (svc_nessus). At 14:04, Vulnerability scan detected on SCAN-01 (svc_nessus). At 14:07, Vulnerability scan detected on SCAN-01 (svc_nessus). At 14:10, Vulnerability scan detected on SCAN-01 (svc_nessus). At 14:13, Vulnerability scan detected on SCAN-01 (svc_nessus).",
+   "hypothesis": "Scheduled vulnerability scan from SCAN-01 (benign, score 0).",
+   "recommended_actions": [
+    "Close incident as benign (known noise pattern)"
+   ],
+   "confidence": 0.0,
+   "generated_by": "stub",
+   "trace": {
+    "model": "stub",
+    "prompt_sha256": "02b10bfe228f90042a414c3e8d91dc20d36419470a0bee4563efa594acd06788",
+    "latency_ms": 0,
+    "raw_response": null,
+    "error": "pure noise: closed by rules, no AI call",
+    "called_at": "2026-10-24T10:53:06-06:00"
+   },
+   "flags": [],
+   "alerts_covered": 12
+  },
   "autonomy": "auto_closed",
   "actions": [
    {
@@ -374,17 +410,25 @@
    }
   ],
   "ai": {
-   "narrative": "At 14:02 maria.lopez received Invoice_8841.docm from billing@nb-suppliers.example. At 14:06 WINWORD.EXE spawned an encoded PowerShell command on WS-FIN-07, which a minute later connected to cdn-update-sync.example (203.0.113.77), a domain registered 2 days earlier. At 14:09 a scheduled task named OneDriveSyncHelper was created on WS-FIN-07 for persistence. At 14:15 WS-FIN-07 produced 40 failed logons against 12 accounts in 90 seconds. At 14:18 svc_backup logged on to SRV-FILES-01 from WS-FIN-07 for the first time, ran domain admin discovery at 14:20 and deleted all shadow copies at 14:22.",
-   "hypothesis": "Pre-encryption stage of a ransomware intrusion that began with a phishing attachment.",
+   "narrative": "At 14:02, an initial access attempt occurred when maria.lopez received a macro-enabled attachment from billing@nb-suppliers.example. By 14:06, WINWORD.EXE spawned powershell.exe with an encoded command on WS-FIN-07, indicating execution. Shortly after at 14:07, WS-FIN-07 connected to the newly registered domain cdn-update-sync.example (203.0.113.77) for command and control. Persistence was established at 14:09 with the creation of a scheduled task named OneDriveSyncHelper on WS-FIN-07. At 14:15, 40 failed logon attempts were observed from WS-FIN-07 against 12 accounts, suggesting credential access activity. Lateral movement was detected at 14:18 when svc_backup logged on to SRV-FILES-01 from WS-FIN-07 for the first time. Discovery activity followed at 14:20, with svc_backup running `net group \"Domain Admins\" /domain` on SRV-FILES-01. Finally, at 14:22, svc_backup executed `vssadmin delete shadows /all /quiet` on SRV-FILES-01, indicating an impact stage activity consistent with pre-ransomware behavior.",
+   "hypothesis": "The attacker gained initial access via a phishing email, established persistence and command and control on WS-FIN-07, then moved laterally to SRV-FILES-01 using compromised credentials to prepare for a ransomware attack by deleting shadow copies.",
    "recommended_actions": [
-    "Isolate WS-FIN-07 and SRV-FILES-01 in EDR",
-    "Disable svc_backup and rotate its credentials",
-    "Remove scheduled task OneDriveSyncHelper and %APPDATA%\\sync.exe on WS-FIN-07",
-    "Search mail for other recipients of Invoice_8841.docm",
-    "Verify SRV-FILES-01 backups are intact and offline"
+    "Immediately isolate WS-FIN-07 and SRV-FILES-01 from the network using EDR to prevent further compromise.",
+    "Disable the svc_backup account and force a password reset for all associated services and applications.",
+    "Kill the process and remove the persistence mechanism related to OneDriveSyncHelper (%APPDATA%\\sync.exe) on WS-FIN-07."
    ],
    "confidence": 0.9,
-   "generated_by": "gemini-2.5-flash"
+   "generated_by": "gemini-2.5-flash",
+   "trace": {
+    "model": "gemini-2.5-flash",
+    "prompt_sha256": "9a6b3ea0fb58950094fbb741aa9a4d4bdd2226a518ffdec2d24de2297129eab9",
+    "latency_ms": 7414,
+    "raw_response": "{\n  \"narrative\": \"At 14:02, an initial access attempt occurred when maria.lopez received a macro-enabled attachment from billing@nb-suppliers.example. By 14:06, WINWORD.EXE spawned powershell.exe with an encoded command on WS-FIN-07, indicating execution. Shortly after at 14:07, WS-FIN-07 connected to the newly registered domain cdn-update-sync.example (203.0.113.77) for command and control. Persistence was established at 14:09 with the creation of a scheduled task named OneDriveSyncHelper on WS-FIN-07. At 14:15, 40 failed logon attempts were observed from WS-FIN-07 against 12 accounts, suggesting credential access activity. Lateral movement was detected at 14:18 when svc_backup logged on to SRV-FILES-01 from WS-FIN-07 for the first time. Discovery activity followed at 14:20, with svc_backup running `net group \\\"Domain Admins\\\" /domain` on SRV-FILES-01. Finally, at 14:22, svc_backup executed `vssadmin delete shadows /all /quiet` on SRV-FILES-01, indicating an impact stage activity consistent with pre-ransomware behavior.\",\n  \"hypothesis\": \"The attacker gained initial access via a phishing email, established persistence and command and control on WS-FIN-07, then moved laterally to SRV-FILES-01 using compromised credentials to prepare for a ransomware attack by deleting shadow copies.\",\n  \"recommended_actions\": [\n    \"Immediately isolate WS-FIN-07 and SRV-FILES-01 from the network using EDR to prevent further compromise.\",\n    \"Disable the svc_backup account and force a password reset for all associated services and applications.\",\n    \"Kill the process and remove the persistence mechanism related to OneDriveSyncHelper (%APPDATA%\\\\sync.exe) on WS-FIN-07.\"\n  ],\n  \"confidence\": 0.9\n}",
+    "error": null,
+    "called_at": "2026-10-24T10:51:32-06:00"
+   },
+   "flags": [],
+   "alerts_covered": 8
   },
   "autonomy": "awaiting_approval",
   "actions": [
@@ -543,7 +587,25 @@
    }
   ],
   "signals": [],
-  "ai": null,
+  "ai": {
+   "narrative": "At 14:02, Antivirus detection - remediated on WS-MKT-03 (carlos.mendez). At 14:02, Antivirus detection - remediated on WS-MKT-03 (carlos.mendez).",
+   "hypothesis": "Remediated antivirus detection on WS-MKT-03 (benign, score 0).",
+   "recommended_actions": [
+    "Close incident as benign (known noise pattern)"
+   ],
+   "confidence": 0.0,
+   "generated_by": "stub",
+   "trace": {
+    "model": "stub",
+    "prompt_sha256": "88af7204c4aa35982bb3f0eed43e996ebe6b4ec57b2bbdece8cdacfff8ca3c52",
+    "latency_ms": 0,
+    "raw_response": null,
+    "error": "pure noise: closed by rules, no AI call",
+    "called_at": "2026-10-24T10:53:06-06:00"
+   },
+   "flags": [],
+   "alerts_covered": 2
+  },
   "autonomy": "auto_closed",
   "actions": [
    {
@@ -628,7 +690,25 @@
    }
   ],
   "signals": [],
-  "ai": null,
+  "ai": {
+   "narrative": "At 13:54, Repeated authentication failure on PRN-02 (printer.prn02). At 14:04, Repeated authentication failure on PRN-02 (printer.prn02). At 14:14, Repeated authentication failure on PRN-02 (printer.prn02). At 14:24, Repeated authentication failure on PRN-02 (printer.prn02).",
+   "hypothesis": "Isolated failed logons on PRN-02 (benign, score 0).",
+   "recommended_actions": [
+    "Close incident as benign (known noise pattern)"
+   ],
+   "confidence": 0.0,
+   "generated_by": "stub",
+   "trace": {
+    "model": "stub",
+    "prompt_sha256": "227fc1a8a28917316e4f757ad24acf7d37748b84be18bd888adf730fab593e30",
+    "latency_ms": 0,
+    "raw_response": null,
+    "error": "pure noise: closed by rules, no AI call",
+    "called_at": "2026-10-24T10:53:06-06:00"
+   },
+   "flags": [],
+   "alerts_covered": 4
+  },
   "autonomy": "auto_closed",
   "actions": [
    {

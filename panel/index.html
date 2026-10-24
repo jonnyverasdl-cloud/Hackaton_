@@ -24,7 +24,7 @@ button{font:inherit;cursor:pointer}
 .brand{font-weight:800;font-size:20px;letter-spacing:-.02em}
 .brand span{color:var(--red)}
 .synth{font:700 12px var(--mono);letter-spacing:.06em;white-space:nowrap;color:var(--amber);border:1.5px solid var(--amber);padding:3px 8px;border-radius:4px}
-.funnel{display:flex;align-items:center;gap:4px;margin-left:4px}
+.funnel{display:flex;align-items:center;gap:4px;margin-left:4px;flex:none}
 .fstep{display:flex;flex-direction:column;align-items:center;padding:2px 7px;white-space:nowrap;border-radius:6px;background:var(--panel)}
 .fstep b{font:700 20px/1.1 var(--mono)}
 .fstep small{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
@@ -32,7 +32,8 @@ button{font:inherit;cursor:pointer}
 .farrow{color:var(--faint);font-size:18px}
 .spacer{flex:1}
 .chip{white-space:nowrap;font:600 12px var(--mono);padding:4px 8px;border-radius:4px;background:var(--panel2);color:var(--dim);border:1px solid var(--line)}
-.status{display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:0}
+.status{display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:0;flex:0 1 auto}
+#mode{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 #conn{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--dim);max-width:340px}
 #conn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #conn i{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:none}
@@ -144,7 +145,14 @@ h3 .hint{text-transform:none;letter-spacing:0;font-weight:500;color:var(--faint)
 .ai p{margin:0 0 10px;font-size:16px;line-height:1.55}
 .ai .hyp{font-size:16px;font-weight:600;color:#fff;border-left:3px solid var(--violet);padding-left:10px}
 .ai ol{margin:6px 0 0;padding-left:22px;font-size:15px}
-.ai.wait .hd{color:var(--dim)}
+.ai.wait .hd{color:var(--dim)}.ai.stub{border-color:var(--line2);background:var(--panel)}.ai.stub .hd{color:var(--dim)}
+.chip.rec{color:#c9b8ff;border-color:#3b3270}
+.upd{color:var(--amber);font-size:14px;font-weight:600;margin:0 0 8px}
+.flags{background:var(--amber-bg);border:1px solid var(--amber);border-radius:6px;padding:8px 12px;margin:0 0 10px;color:var(--amber);font-size:14px}.flags ul{margin:4px 0 0;padding-left:18px;color:var(--text)}
+.noflag{color:var(--green);font-size:13px;font-weight:600;margin:0 0 8px}
+.trace{font:500 12px var(--mono);color:var(--faint);margin-top:10px}
+.raw{display:inline}.raw summary{cursor:pointer;color:var(--blue);display:inline}.raw[open]{display:block}.raw pre{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;max-height:260px;overflow:auto;color:var(--dim)}
+.st.aich{background:#1e1a3a;color:#c9b8ff;border:1px solid #3b3270}
 .shimmer{height:12px;border-radius:4px;margin:8px 0;background:linear-gradient(90deg,#1e1a3a 0%,#2e2858 50%,#1e1a3a 100%);background-size:200% 100%;animation:sh 1.3s infinite linear}
 @keyframes sh{to{background-position:-200% 0}}
 .tl{position:relative;padding-left:20px}
@@ -171,7 +179,7 @@ h3 .hint{text-transform:none;letter-spacing:0;font-weight:500;color:var(--faint)
 #audit .ah{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);gap:8px}
 #audit .ah b{font-size:16px;white-space:nowrap}
 .aent{padding:9px 16px;border-bottom:1px solid #1a2333}
-.aent .l1{display:flex;gap:8px;align-items:center;overflow:hidden}.aent .l1>*{white-space:nowrap;flex:none}
+.aent .l1{display:flex;gap:4px 8px;align-items:center;flex-wrap:wrap}.aent .l1>*{white-space:nowrap;flex:none}
 .aent .lab{font-size:15px;font-weight:600;margin:2px 0}
 .aent .why{font-size:13px;color:var(--dim)}
 .link{color:var(--blue);cursor:pointer;font:700 13px var(--mono)}
@@ -219,12 +227,12 @@ const LADDER=[["monitoring","Monitoring"],["auto_contained","Auto-contained"],["
 
 /* ---------- live API ---------- */
 const live={
-  async get(p){const r=await fetch(API+p,{cache:"no-store"});if(!r.ok)throw new Error(`GET ${p} → ${r.status}`);return r.json();},
+  async get(p){const r=await fetch(API+p,{cache:"no-store",signal:AbortSignal.timeout(4000)});if(!r.ok)throw new Error(`GET ${p} → ${r.status}`);return r.json();},
   health(){return this.get("/health");}, alerts(){return this.get("/alerts");}, incidents(){return this.get("/incidents");},
   incident(id){return this.get("/incidents/"+encodeURIComponent(id));}, audit(){return this.get("/audit");},
-  async approve(id,by){const r=await fetch(API+"/incidents/"+encodeURIComponent(id)+"/approve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({approved_by:by})});
-    if(!r.ok)throw new Error(`approve → ${r.status} ${(await r.text()).slice(0,120)}`);return r.json();},
-  async reset(){const r=await fetch(API+"/reset",{method:"POST"});if(!r.ok)throw new Error(`reset → ${r.status}`);},
+  async approve(id,by){const r=await fetch(API+"/incidents/"+encodeURIComponent(id)+"/approve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({approved_by:by}),signal:AbortSignal.timeout(4000)});
+    if(!r.ok){let m;try{m=(await r.json()).detail;}catch(_){}throw new Error(typeof m==="string"?m:`approve → ${r.status}`);}return r.json();},
+  async reset(){const r=await fetch(API+"/reset",{method:"POST",signal:AbortSignal.timeout(4000)});if(!r.ok)throw new Error(`reset → ${r.status}`);},
 };
 
 /* ---------- mock API: replays real-pipeline snapshots from fixtures/ over ~50 s ---------- */
@@ -259,8 +267,10 @@ const mock={
   async incidents(){return this.snap().incs.map(summary);},
   async incident(id){const i=this.snap().incs.find(x=>x.incident_id===id);if(!i)throw new Error("404 "+id);return i;},
   async audit(){const s=this.snap(),al=await this.alerts(),sup=al.filter(a=>a.suppressed),by={};sup.forEach(a=>by[a.event_type]=(by[a.event_type]||0)+1);
-    return {entries:[...this.auditAll.slice(0,s.auditLen),...this.apAudit],suppressed_noise:{count:sup.length,by_type:by}};},
-  async approve(id,by){const at=localIso(),i=await this.incident(id);if(this.approvals[id]||!i.actions.some(a=>a.status==="pending"))throw new Error("409 nothing pending");
+    const now=performance.now(),aiE=Object.entries(this.aiAt).filter(([id,t])=>now>=t&&this.final[id]?.ai?.trace&&this.final[id].ai.generated_by!=="stub").map(([id])=>{const f=this.final[id],tr=f.ai.trace;
+      return {at:tr.called_at,scenario_time:f.window.end,incident_id:id,action:"ai_narrative",label:`AI narrative generated (${f.ai.generated_by}) · recorded`,targets:[],executed_by:"ai:"+f.ai.generated_by,reason:`model ${tr.model}, ${tr.latency_ms} ms, ${(f.ai.flags||[]).length} flag(s), prompt sha256 ${String(tr.prompt_sha256).slice(0,12)}`};});
+    return {entries:[...this.auditAll.slice(0,s.auditLen),...aiE,...this.apAudit],suppressed_noise:{count:sup.length,by_type:by}};},
+  async approve(id,by){const at=localIso(),i=await this.incident(id);if(this.approvals[id]||!i.actions.some(a=>a.status==="pending"))throw new Error(`${id} has no actions awaiting approval`);
     i.actions.filter(a=>a.status==="pending").forEach(a=>this.apAudit.push({at,scenario_time:null,incident_id:id,action:a.id,label:a.label,targets:a.targets||[],executed_by:by,reason:"approved by "+by}));
     this.approvals[id]={by,at};return this.incident(id);},
   async reset(){this.restart();},
@@ -270,22 +280,22 @@ function summary(i){return {incident_id:i.incident_id,title:i.title,verdict:i.ve
 const api=MOCK?mock:live;
 
 /* ---------- state ---------- */
-const S={prevAuto:{},bumpUntil:{},health:null,alerts:[],incs:[],detail:null,audit:null,sel:null,want:Q.get("sel"),manual:false,err:null,detailSig:"",fetchedSig:"",incSig:"",chainSig:"",lit:{},auditOpen:false,shown:new Map(),busy:false,approveMsg:""};
+const S={rawOpen:false,again:false,prevAuto:{},bumpUntil:{},health:null,alerts:[],incs:[],detail:null,audit:null,sel:null,want:Q.get("sel"),manual:false,err:null,detailSig:"",incSig:"",chainSig:"",lit:{},auditOpen:false,shown:new Map(),busy:false,approveMsg:""};
 let approver="";try{approver=localStorage.getItem("storyline.approver")||"";}catch(e){}
 
 async function tick(){
-  if(S.busy)return;S.busy=true;
+  if(S.busy){S.again=true;return;}S.busy=true;
   try{
     const [h,incs,als]=await Promise.all([api.health(),api.incidents(),api.alerts()]);
     S.health=h;S.incs=incs;S.alerts=als;
     pickSelection();
-    if(S.sel){const s=incs.find(i=>i.incident_id===S.sel);const sig=JSON.stringify(s);
-      if(MOCK||sig!==S.fetchedSig||!S.detail||S.detail.incident_id!==S.sel||(!S.detail.ai&&S.detail.verdict!=="benign")){S.detail=await api.incident(S.sel);S.fetchedSig=sig;}}
+    if(S.sel){const want=S.sel,det=await api.incident(want);if(S.sel===want)S.detail=det;else S.again=true;}
     else S.detail=null;
     if(S.auditOpen)S.audit=await api.audit();
     S.err=null;
   }catch(e){S.err=e.message||String(e);}
   S.busy=false;render();
+  if(S.again){S.again=false;setTimeout(tick,0);}
 }
 function pickSelection(){
   const has=S.incs.some(i=>i.incident_id===S.sel);
@@ -303,7 +313,8 @@ function renderTop(){
   const h=S.health,c=h?.counts||{},closed=S.incs.filter(i=>i.autonomy==="auto_closed").length;
   const steps=[["",c.alerts??0,"alerts in"],["noise",c.suppressed_noise??0,"noise suppressed"],["",c.incidents??0,"incidents"],["closed",closed,"auto-closed"],["wait",c.pending_approvals??0,"await analyst"]];
   $("funnel").innerHTML=steps.map(([k,n,l],i)=>(i?'<span class="farrow">›</span>':"")+`<div class="fstep ${k}"><b>${n}</b><small>${l}</small></div>`).join("");
-  $("mode").textContent=h?(h.mode==="rules+ai"?`rules+AI · ${h.ai_model}`:"rules only · AI unavailable"):"…";
+  $("mode").textContent=h?(h.ai?.mode==="recorded"?`recorded · ${h.ai_model}`:h.mode==="rules+ai"?`AI · ${h.ai_model}`:"rules only · AI unavailable"):"…";
+  $("mode").title=h?.ai?.reason||"";
   const conn=$("conn");
   if(S.err){conn.className="err";conn.querySelector("span").textContent=(MOCK?"Fixture error: ":"API unreachable, retrying: ")+S.err+(MOCK?"":" (offline fallback: ?mock=1)");}
   else{conn.className="ok";conn.querySelector("span").textContent=MOCK?(mock.progress()<1?"Mock replay":"Mock replay · done"):"Live · polling 2 s";}
@@ -370,7 +381,7 @@ function statement(d){
   }
   if(pend.length&&d.approved_by)return `<div class="statement wait">New irreversible target after the approval by ${esc(d.approved_by)}: <b>${pend.length} action${pend.length===1?"":"s"}</b> wait for an analyst again.</div>`;
   if(d.autonomy==="approved"||(d.status==="approved"&&!pend.length))return `<div class="statement approved"><b>Approved by ${esc(d.approved_by)}</b> at <span class="mono">${hm(d.approved_at)}</span> (real clock). ${sys.length} reversible actions were run by the system; the irreversible ones ran after analyst approval.</div>`;
-  if(!d.autonomy||d.autonomy==="monitoring")return `<div class="statement mon"><b>Monitoring — waiting for more evidence.</b> ATT&amp;CK technique seen, but score ${d.risk_score} is below 30: no action yet. Re-scored as each alert arrives.</div>`;
+  if(!d.autonomy||d.autonomy==="monitoring")return `<div class="statement mon"><b>Monitoring — waiting for more evidence.</b> ${d.tactics_covered?.length?`ATT&amp;CK technique seen, but score ${d.risk_score}`:`Score ${d.risk_score}`} is below 30: no action yet. Re-scored as each alert arrives.</div>`;
   if(pend.length)return `<div class="statement wait">System already ran <b>${sys.length} reversible action${sys.length===1?"":"s"}</b>. <b>${pend.length} irreversible action${pend.length===1?"":"s"}</b> wait for an analyst.</div>`;
   return `<div class="statement mon">System ran <b>${sys.length} reversible action${sys.length===1?"":"s"}</b> on its own (auto-contained). Nothing irreversible is needed.</div>`;
 }
@@ -387,15 +398,21 @@ function actionRow(a){
 }
 function aiBlock(d){
   const ai=d.ai;
+  if(d.status==="closed"||d.autonomy==="auto_closed")return `<div class="ai wait"><div class="hd">No AI narrative · closed by deterministic rules</div></div>`;
   if(!ai){
-    if(d.status==="closed")return `<div class="ai wait"><div class="hd">No AI narrative · closed by deterministic rules</div></div>`;
     if(S.health?.mode==="rules-only")return `<div class="ai wait"><div class="hd">AI unavailable, rules only</div><p style="color:var(--dim);font-size:15px;margin:0">The timeline, correlation reasons, score and safe actions below are complete without the AI layer.</p></div>`;
     return `<div class="ai wait"><div class="hd">AI writing narrative…</div><div class="shimmer"></div><div class="shimmer" style="width:85%"></div><div class="shimmer" style="width:60%"></div></div>`;
   }
-  const stub=ai.generated_by==="stub";
-  return `<div class="ai"><div class="hd">✦ AI-generated — verify against timeline <span class="chip">${esc(ai.generated_by)}</span>${ai.confidence!=null?`<span class="chip">confidence ${Math.round(ai.confidence*100)}%</span>`:""}${stub?'<span class="st pend">AI unavailable, rules only</span>':""}</div>
+  const stub=ai.generated_by==="stub",tr=ai.trace||{},n=d.alerts.length,stale=ai.alerts_covered!=null&&ai.alerts_covered<n,fl=ai.flags||[];
+  const hd=stub?`<div class="hd">Rules-only summary (AI unavailable)</div>${tr.error?`<div class="trace" style="margin:0 0 8px">${esc(tr.error)}</div>`:""}`:
+    `<div class="hd">✦ AI-generated — verify against timeline <span class="chip">${esc(ai.generated_by)}</span>${ai.confidence!=null?`<span class="chip">confidence ${Math.round(ai.confidence*100)}%</span>`:""}${MOCK?`<span class="chip rec">Recorded model output · ${esc(tr.model||ai.generated_by)} · ${esc(tr.called_at||"")}</span>`:""}</div>`;
+  const upd=stale?`<div class="upd">AI updating narrative… (covers ${ai.alerts_covered} of ${n} alerts)<div class="shimmer"></div></div>`:"";
+  const flags=fl.length?`<div class="flags"><b>⚠ Not in incident — verify</b><ul>${fl.map(f=>`<li><span class="mono">${esc(f.type)}: ${esc(f.value)}</span> (${esc(f.field)})</li>`).join("")}</ul></div>`:
+    (stub?"":`<div class="noflag">✓ 0 entities outside the incident</div>`);
+  const trace=tr.model?`<div class="trace">${esc(tr.model)} · ${tr.latency_ms??"?"} ms · sha256 ${esc(String(tr.prompt_sha256||"").slice(0,12))} · ${esc(tr.called_at||"")}${tr.raw_response?` <details class="raw" ${S.rawOpen?"open":""}><summary>raw</summary><pre>${esc(tr.raw_response)}</pre></details>`:""}</div>`:"";
+  return `<div class="ai ${stub?"stub":""}">${hd}${upd}${flags}
     ${ai.hypothesis?`<p class="hyp">${esc(ai.hypothesis)}</p>`:""}${ai.narrative?`<p>${esc(ai.narrative)}</p>`:""}
-    ${ai.recommended_actions?.length?`<div class="hd" style="margin:4px 0 0">Recommended (suggestions only; only catalog actions execute)</div><ol>${ai.recommended_actions.map(r=>`<li>${esc(r)}</li>`).join("")}</ol>`:""}</div>`;
+    ${ai.recommended_actions?.length?`<div class="hd" style="margin:4px 0 0">Recommended (suggestions only; only catalog actions execute)</div><ol>${ai.recommended_actions.map(r=>`<li>${esc(r)}</li>`).join("")}</ol>`:""}${trace}</div>`;
 }
 function renderDetail(){
   const d=S.detail;
@@ -426,11 +443,14 @@ function renderDetail(){
     <div class="thr">Thresholds: malicious ≥ 70 · suspicious 30–69 · benign &lt; 30${d.signals.length?"":" · no signal fired: noise does not add points"}</div></div>`;
 }
 
+const isAi=e=>e.action==="ai_narrative"||String(e.executed_by||"").startsWith("ai:");
+function aiChip(e){const m=String(e.executed_by||"").replace(/^ai:/,"")||"?",r=String(e.reason||""),ms=r.match(/(\d+)\s*ms/),fl=r.match(/(\d+)\s*flag/);
+  return `<span class="st ${m==="stub"?"pend":"aich"}">${m==="stub"?"AI fallback · stub":"AI narrative · "+esc(m)}${ms?` · ${ms[1]} ms`:""}${fl?` · ${fl[1]} flag${fl[1]==="1"?"":"s"}`:""}</span>`;}
 function renderAudit(){
   const a=S.audit;if(!a){$("auditBody").innerHTML='<div class="empty">Loading…</div>';return;}
   const sn=a.suppressed_noise||{count:0,by_type:{}};
   const html=`<div class="supbox"><b class="mono">${sn.count}</b> alerts suppressed as noise, kept out of every incident<div class="types">${Object.entries(sn.by_type).map(([k,v])=>`<span class="chip">${esc(k)} ×${v}</span>`).join("")}</div></div>`+
-    ([...a.entries].reverse().map(e=>`<div class="aent"><div class="l1">${e.scenario_time?`<span class="time" style="color:var(--text)">${hms(e.scenario_time)}</span><span class="rc">real ${hms(e.at)}</span>`:`<span class="time">${hms(e.at)}</span><span class="rc">real clock</span>`}<span class="link" data-id="${esc(e.incident_id)}">${esc(e.incident_id)}</span>${e.action==="merge"||e.action==="reopen"?`<span class="chip">${esc(e.action)}</span>`:e.executed_by==="system"?'<span class="st sys">System, alone</span>':`<span class="st human">Approved by ${esc(e.executed_by)}</span>`}${e.action==="merge"||e.action==="reopen"?"":`<span class="aid">${esc(e.action)}</span>`}</div><div class="lab">${esc(e.label)}</div><div class="why">${esc(e.reason)}</div></div>`).join("")||'<div class="empty">The system has not acted yet.</div>');
+    ([...a.entries].reverse().map(e=>`<div class="aent"><div class="l1">${e.scenario_time?`<span class="time" style="color:var(--text)">${hms(e.scenario_time)}</span><span class="rc">real ${hms(e.at)}</span>`:`<span class="time">${hms(e.at)}</span><span class="rc">real clock</span>`}<span class="link" data-id="${esc(e.incident_id)}">${esc(e.incident_id)}</span>${isAi(e)?aiChip(e):e.action==="merge"||e.action==="reopen"?`<span class="chip">${esc(e.action)}</span>`:e.executed_by==="system"?'<span class="st sys">System, alone</span>':`<span class="st human">Approved by ${esc(e.executed_by)}</span>`}${isAi(e)||e.action==="merge"||e.action==="reopen"?"":`<span class="aid">${esc(e.action)}</span>`}</div><div class="lab">${esc(e.label)}</div><div class="why">${esc(e.reason)}</div></div>`).join("")||'<div class="empty">The system has not acted yet.</div>');
   if($("auditBody")._h!==html){$("auditBody").innerHTML=html;$("auditBody")._h=html;}
 }
 
@@ -440,6 +460,7 @@ $("auditBody").addEventListener("click",e=>{const l=e.target.closest(".link");if
 $("btnAudit").onclick=()=>{S.auditOpen=!S.auditOpen;$("audit").classList.toggle("open",S.auditOpen);if(S.auditOpen){renderAudit();tick();}};
 $("btnAuditClose").onclick=()=>{S.auditOpen=false;$("audit").classList.remove("open");};
 $("dbody").addEventListener("input",e=>{if(e.target.id==="approver"){approver=e.target.value;try{localStorage.setItem("storyline.approver",approver);}catch(_){}}});
+$("dbody").addEventListener("toggle",e=>{if(e.target.classList?.contains("raw"))S.rawOpen=e.target.open;},true);
 $("dbody").addEventListener("keydown",e=>{if(e.target.id==="approver"&&e.key==="Enter")doApprove();});
 $("dbody").addEventListener("click",e=>{if(e.target.id==="btnApprove")doApprove();});
 async function doApprove(){
@@ -457,7 +478,7 @@ $("btnReplay").onclick=async()=>{
   try{await api.reset();}catch(e){S.err=e.message;}
   $("btnReplay").textContent=MOCK?"Replay":"Reset";
   for(const el of S.shown.values())el.remove();S.shown.clear();
-  Object.assign(S,{sel:null,manual:false,detail:null,audit:null,lit:{},incSig:"",detailSig:"",chainSig:"",fetchedSig:"",approveMsg:""});tick();
+  Object.assign(S,{sel:null,manual:false,detail:null,audit:null,lit:{},incSig:"",detailSig:"",chainSig:"",approveMsg:""});tick();
 };
 
 (async()=>{
