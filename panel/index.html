@@ -408,7 +408,9 @@ function aiBlock(d){
   const stub=ai.generated_by==="stub",tr=ai.trace||{},n=d.alerts.length,stale=ai.alerts_covered!=null&&ai.alerts_covered<n,fl=ai.flags||[];
   const hd=stub?`<div class="hd">Rules-only summary (AI unavailable)</div>${tr.error?`<div class="trace" style="margin:0 0 8px">${esc(tr.error)}</div>`:""}`:
     `<div class="hd">✦ AI-generated — verify against timeline <span class="chip">${esc(ai.generated_by)}</span>${ai.confidence!=null?`<span class="chip">confidence ${Math.round(ai.confidence*100)}%</span>`:""}${MOCK?`<span class="chip rec">Recorded model output · ${esc(tr.model||ai.generated_by)} · ${esc(tr.called_at||"")}</span>`:""}</div>`;
-  const upd=stale&&!stub?`<div class="upd">AI updating narrative… (covers ${ai.alerts_covered} of ${n} alerts)<div class="shimmer"></div></div>`:"";
+  const uf=ai.update_failed;
+  const upd=uf&&!stub?`<div class="upd">AI update failed (${esc(uf.error||"error")}): showing the last good narrative (covers ${ai.alerts_covered??"?"} of ${n} alerts)</div>`:
+    stale&&!stub?`<div class="upd">AI updating narrative… (covers ${ai.alerts_covered} of ${n} alerts)<div class="shimmer"></div></div>`:"";
   const flags=fl.length?`<div class="flags"><b>⚠ Not in incident — verify</b><ul>${fl.map(f=>`<li><span class="mono">${esc(f.type)}: ${esc(f.value)}</span> (${esc(f.field)})</li>`).join("")}</ul></div>`:
     (stub?"":`<div class="noflag">✓ 0 entities outside the incident</div>`);
   const trace=!stub&&tr.model?`<div class="trace">${esc(tr.model)} · ${tr.latency_ms??"?"} ms · sha256 ${esc(String(tr.prompt_sha256||"").slice(0,12))} · ${esc(tr.called_at||"")}${tr.raw_response?` <details class="raw" ${S.rawOpen?"open":""}><summary>raw</summary><pre>${esc(tr.raw_response)}</pre></details>`:""}</div>`:"";
@@ -418,7 +420,8 @@ function aiBlock(d){
 }
 function renderDetail(){
   const d=S.detail;
-  if(document.activeElement?.id==="approver")return;
+  // Keep rendering while the analyst types: remember focus and caret, restore after the re-render.
+  const foc=document.activeElement?.id==="approver"?[$("approver").selectionStart,$("approver").selectionEnd]:null;
   const sig=JSON.stringify([d,S.approveMsg,S.incs.map(i=>[i.incident_id,i.status,i.hosts])]);if(sig===S.detailSig)return;S.detailSig=sig;
   if(!d){$("dbody").innerHTML=`<div class="empty">${S.incs.length?"Select an incident":"Waiting for incidents…"}</div>`;$("dsub").textContent="";return;}
   const vk=vkey(d),[c]=vcol(vk),byId=Object.fromEntries(S.alerts.map(a=>[a.alert_id,a]));
@@ -443,6 +446,7 @@ function renderDetail(){
   <h3>Risk score</h3>${d.signals.map(s=>`<div class="sig"><span>${esc(s.name)}<small>${esc(s.detail)}</small></span><span class="pts">+${s.points}</span></div>`).join("")}
     <div class="sig total"><span>Risk score${total!==d.risk_score?` (sum ${total}, capped)`:""}</span><span class="pts">${d.risk_score}</span></div>
     <div class="thr">Thresholds: malicious ≥ 70 · suspicious 30–69 · benign &lt; 30${vk==="monitoring"?" · benign + open = MONITORING until closed":""}${d.signals.length?"":" · no signal fired: noise does not add points"}</div></div>`;
+  if(foc){const inp=$("approver");if(inp){inp.focus();inp.setSelectionRange(foc[0],foc[1]);}}
 }
 
 const isAi=e=>e.action==="ai_narrative"||String(e.executed_by||"").startsWith("ai:");

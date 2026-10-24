@@ -84,7 +84,7 @@ if ($busy) {
 # script (a piped caller would otherwise wait forever) and keeps running after we exit.
 $aiFlag = if ($NoAI) { "set AI_DISABLED=1&& " } else { "set AI_DISABLED=&& " }
 $cmdLine = "cmd.exe /c `"$aiFlag`"$Python`" -m uvicorn backend.app.main:app --host 127.0.0.1 --port $Port " +
-           "> `"$Logs\backend.out.log`" 2> `"$Logs\backend.err.log`"`""
+           "> `"$Logs\backend-$Port.out.log`" 2> `"$Logs\backend-$Port.err.log`"`""
 $created = Invoke-CimMethod -ClassName Win32_Process -MethodName Create `
   -Arguments @{ CommandLine = $cmdLine; CurrentDirectory = $PSScriptRoot }
 if ($created.ReturnValue -ne 0) { Say "Could not start the backend (WMI code $($created.ReturnValue))." "Red"; exit 1 }
@@ -99,8 +99,8 @@ for ($i = 0; $i -lt 60; $i++) {
   if (-not (Get-Process -Id $backendPid -ErrorAction SilentlyContinue)) { break }
 }
 if (-not $health) {
-  Say "Backend did not become healthy. Last lines of logs\backend.err.log:" "Red"
-  if (Test-Path (Join-Path $Logs "backend.err.log")) { Get-Content (Join-Path $Logs "backend.err.log") -Tail 15 }
+  Say "Backend did not become healthy. Last lines of logs\backend-$Port.err.log:" "Red"
+  if (Test-Path (Join-Path $Logs "backend-$Port.err.log")) { Get-Content (Join-Path $Logs "backend-$Port.err.log") -Tail 15 }
   Stop-Backend
   exit 1
 }

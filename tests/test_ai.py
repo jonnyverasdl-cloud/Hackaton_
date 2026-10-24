@@ -444,3 +444,49 @@ def test_lowercase_hosts_and_new_tlds_flagged(attack_incident):
     flags = {(f["type"], f["value"]) for f in verify_entities(out, attack_incident, TODAY)}
     assert flags == {("unknown_host", "ws-fin-99"), ("unknown_host", "srv-dc-01"),
                      ("unknown_domain", "x.onion"), ("unknown_domain", "evil.cloud")}
+
+
+# --- last good narrative is kept when a later call fails ---------------------------
+
+def _flaky(fail_calls):
+    count = {"n": 0}
+
+    def behave(prompt):
+        count["n"] += 1
+        if count["n"] in fail_calls:
+            raise PermissionError("quota exceeded for demo-proj-123")
+        return Resp(json.dumps(GOOD))
+    return behave
+
+
+def test_later_failure_keeps_last_good_narrative():
+    n, client = narrator(_flaky(fail_calls=range(2, 100)))  # only the first call succeeds
+    s = Store(window_min=30, narrator=n)
+    for r in RAW:
+        s.ingest(gs.public_view(r))
+    attack = _attack(s)
+    assert len(client.calls) > 1
+    assert attack["ai"]["generated_by"] != "stub" and attack["ai"]["narrative"] == GOOD["narrative"]
+    uf = attack["ai"]["update_failed"]
+    assert uf["error"] == "PermissionError" and uf["alerts"] == len(attack["alerts"])
+    assert "demo-proj-123" not in json.dumps(attack["ai"])
+    assert any(e["action"] == "ai_narrative" and e["executed_by"] == "ai:stub" for e in s.audit)  # still audited
+
+
+def test_success_after_failure_clears_the_mark():
+    n, client = narrator(_flaky(fail_calls={2}))
+    s = Store(window_min=30, narrator=n)
+    for r in RAW:
+        s.ingest(gs.public_view(r))
+    attack = _attack(s)
+    assert len(client.calls) > 2
+    assert attack["ai"]["generated_by"] != "stub" and "update_failed" not in attack["ai"]
+
+
+def test_first_failure_still_shows_the_stub():
+    n, _ = narrator(_flaky(fail_calls=range(1, 100)))
+    s = Store(window_min=30, narrator=n)
+    for r in RAW:
+        s.ingest(gs.public_view(r))
+    attack = _attack(s)
+    assert attack["ai"]["generated_by"] == "stub" and "update_failed" not in attack["ai"]

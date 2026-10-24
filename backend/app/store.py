@@ -164,7 +164,14 @@ class Store:
             current = self.incidents.get(incident_id)
             if gen != self._gen or current is None:
                 return  # reset (or incident gone) during the call: drop the stale result
-            current["ai"] = block
+            prev = current.get("ai")
+            if block["generated_by"] == "stub" and prev and prev.get("generated_by") != "stub":
+                # Never replace a real narrative with the stub: keep the last good one, mark the failure.
+                current["ai"] = {**prev, "update_failed": {"error": block["trace"]["error"],
+                                                           "at": block["trace"]["called_at"],
+                                                           "alerts": len(incident["alerts"])}}
+            else:
+                current["ai"] = block
             if not self.narrator.live:
                 return  # no model configured: nothing was called, nothing to audit
             trace = block["trace"]
