@@ -10,3 +10,4 @@ evidence/
 Thumbs.db
 *credentials*.json
 *key*.json
+logs/
