@@ -216,7 +216,7 @@ Design notes written before the event, with no code, are in `docs/prep/`.
 
 ## 10. Tests
 
-143 tests run in about 40 seconds with no network access; the model is replaced by a fake client.
+151 tests run in about 40 seconds with no network access; the model is replaced by a fake client.
 They cover:
 
 - the scenario's ground truth and the synthetic-only rule;

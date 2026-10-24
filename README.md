@@ -235,7 +235,7 @@ Design notes written before the event (no code) are in `docs/prep/`.
 
 ## Tests
 
-**143 tests** (`.venv\Scripts\python.exe -m pytest -q`, about 40 s, no network: the AI is replaced
+**151 tests** (`.venv\Scripts\python.exe -m pytest -q`, about 40 s, no network: the AI is replaced
 by a fake client).
 
 | File | Tests | Covers |
@@ -243,8 +243,8 @@ by a fake client).
 | `test_scenario.py` | 17 | scenario ground truth, synthetic-only data, replay (health wait, retry, no retry on 4xx) |
 | `test_schema.py` | 12 | contract validity, bad values and timestamps rejected |
 | `test_core.py` | 36 | normalizer, each correlation rule, scoring, the attack incident, the maria.lopez trap |
-| `test_api.py` | 45 | every route, autonomy, approval, stable incident ids replaying alert by alert, no double execution, rollback on bad input |
-| `test_ai.py` | 28 | trace, prompt contract, timeout and error fallbacks, entity flags, no secrets in errors, reset during a call, AI never changes actions |
+| `test_api.py` | 47 | every route, autonomy, approval, stable incident ids replaying alert by alert, no double execution, rollback on bad input |
+| `test_ai.py` | 34 | trace, prompt contract, warm-up, timeout and error fallbacks, entity flags, no secrets in errors, reset during a call, AI never changes actions |
 | `test_fixtures.py` | 3 | offline fixtures match the backend; recorded AI is a real call |
 | `test_benchmark.py` | 2 | the benchmark runs and checks correctness |
 
