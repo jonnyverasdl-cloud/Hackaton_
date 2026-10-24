@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://novabanco.example/contracts/incident.schema.json",
+  "title": "Storyline contracts: normalized alert and incident",
+  "description": "Backend <-> panel contract. Source: docs/prep/02-esquema.md. Validate against #/$defs/alert or #/$defs/incident.",
+  "$defs": {
+    "nullable_string": {"type": ["string", "null"]},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "alert_id": {"type": "string", "pattern": "^ALT-[0-9]{6}$"},
+    "incident_id": {"type": "string", "pattern": "^INC-[0-9]{4}$"},
+    "event_type": {
+      "enum": [
+        "email_attachment_macro",
+        "email_link_suspicious",
+        "office_spawn_shell",
+        "encoded_powershell",
+        "outbound_new_domain",
+        "scheduled_task_created",
+        "registry_run_key",
+        "auth_spray",
+        "auth_failed",
+        "lateral_logon_new_source",
+        "domain_discovery",
+        "shadow_copy_delete",
+        "mass_file_rename",
+        "vuln_scan",
+        "av_cleaned",
+        "system_update",
+        "unknown"
+      ]
+    },
+    "alert": {
+      "type": "object",
+      "required": ["alert_id", "timestamp", "source", "vendor_rule", "event_type", "severity_raw", "raw"],
+      "properties": {
+        "alert_id": {"$ref": "#/$defs/alert_id"},
+        "timestamp": {"$ref": "#/$defs/timestamp"},
+        "source": {"enum": ["edr", "proxy", "auth", "email_gateway", "ids"]},
+        "vendor_rule": {"type": "string"},
+        "host": {"$ref": "#/$defs/nullable_string"},
+        "user": {"$ref": "#/$defs/nullable_string"},
+        "src_ip": {"$ref": "#/$defs/nullable_string"},
+        "dst_ip": {"$ref": "#/$defs/nullable_string"},
+        "domain": {"$ref": "#/$defs/nullable_string"},
+        "process": {"$ref": "#/$defs/nullable_string"},
+        "parent_process": {"$ref": "#/$defs/nullable_string"},
+        "event_type": {"$ref": "#/$defs/event_type"},
+        "severity_raw": {"enum": ["info", "low", "medium", "high", "critical"]},
+        "raw": {"type": "object"}
+      }
+    },
+    "timeline_entry": {
+      "type": "object",
+      "required": ["timestamp", "alert_id", "technique", "tactic", "summary"],
+      "properties": {
+        "timestamp": {"$ref": "#/$defs/timestamp"},
+        "alert_id": {"$ref": "#/$defs/alert_id"},
+        "technique": {"type": ["string", "null"]},
+        "tactic": {"type": ["string", "null"]},
+        "summary": {"type": "string"}
+      }
+    },
+    "correlation_reason": {
+      "type": "object",
+      "required": ["rule", "detail"],
+      "properties": {
+        "rule": {"enum": ["same_host_window", "user_pivot", "shared_infra", "same_user_window", "noise_isolation"]},
+        "detail": {"type": "string"}
+      }
+    },
+    "signal": {
+      "type": "object",
+      "required": ["name", "detail", "points"],
+      "properties": {
+        "name": {"type": "string"},
+        "detail": {"type": "string"},
+        "points": {"type": "integer", "minimum": 0}
+      }
+    },
+    "ai_block": {
+      "type": ["object", "null"],
+      "required": ["narrative", "hypothesis", "recommended_actions", "confidence", "generated_by"],
+      "properties": {
+        "narrative": {"type": "string"},
+        "hypothesis": {"type": "string"},
+        "recommended_actions": {"type": "array", "items": {"type": "string"}},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "generated_by": {"type": "string"}
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": ["id", "label", "reversible", "status", "executed_by", "executed_at", "reason"],
+      "properties": {
+        "id": {
+          "enum": ["close_benign", "watchlist_host", "tag_user", "block_domain", "collect_triage",
+                   "isolate_host", "disable_account", "kill_process"]
+        },
+        "label": {"type": "string"},
+        "reversible": {"type": "boolean"},
+        "status": {"enum": ["executed", "pending"]},
+        "executed_by": {"type": ["string", "null"]},
+        "executed_at": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+        "reason": {"type": "string"}
+      }
+    },
+    "incident": {
+      "type": "object",
+      "required": [
+        "incident_id", "status", "verdict", "risk_score", "title", "window", "entities", "alerts",
+        "timeline", "tactics_covered", "correlation_reasons", "signals", "ai", "autonomy", "actions",
+        "approved_by", "approved_at"
+      ],
+      "properties": {
+        "incident_id": {"$ref": "#/$defs/incident_id"},
+        "status": {"enum": ["open", "approved", "closed"]},
+        "verdict": {"enum": ["malicious", "suspicious", "benign"]},
+        "risk_score": {"type": "integer", "minimum": 0, "maximum": 100},
+        "title": {"type": "string"},
+        "window": {
+          "type": "object",
+          "required": ["start", "end"],
+          "properties": {"start": {"$ref": "#/$defs/timestamp"}, "end": {"$ref": "#/$defs/timestamp"}}
+        },
+        "entities": {
+          "type": "object",
+          "required": ["hosts", "users", "domains", "ips"],
+          "properties": {
+            "hosts": {"type": "array", "items": {"type": "string"}},
+            "users": {"type": "array", "items": {"type": "string"}},
+            "domains": {"type": "array", "items": {"type": "string"}},
+            "ips": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "alerts": {"type": "array", "items": {"$ref": "#/$defs/alert_id"}, "minItems": 1},
+        "timeline": {"type": "array", "items": {"$ref": "#/$defs/timeline_entry"}},
+        "tactics_covered": {"type": "array", "items": {"type": "string"}},
+        "correlation_reasons": {"type": "array", "items": {"$ref": "#/$defs/correlation_reason"}},
+        "signals": {"type": "array", "items": {"$ref": "#/$defs/signal"}},
+        "ai": {"$ref": "#/$defs/ai_block"},
+        "autonomy": {"enum": ["auto_closed", "auto_contained", "awaiting_approval"]},
+        "actions": {"type": "array", "items": {"$ref": "#/$defs/action"}},
+        "approved_by": {"type": ["string", "null"]},
+        "approved_at": {"anyOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]}
+      }
+    }
+  }
+}

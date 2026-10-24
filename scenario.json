@@ -1,0 +1,1009 @@
+{
+  "scenario": "Pre-ransomware intrusion at NovaBanco",
+  "synthetic": true,
+  "note": "Synthetic data only. Domains use .example; IPs are documentation/private ranges.",
+  "alerts": [
+    {
+      "id": "ALT-000001",
+      "_truth": {
+        "attack": false,
+        "noise": "proxy_uncategorized"
+      },
+      "source": "proxy",
+      "timestamp": "2026-10-24T13:51:59-06:00",
+      "rule": "Access to uncategorized website",
+      "severity": "info",
+      "client_host": "WS-HR-02",
+      "client_ip": "10.20.6.12",
+      "user": "jose.ramirez",
+      "dest_host": "daily-ledger-news.example",
+      "dest_ip": "203.0.113.120",
+      "method": "GET",
+      "url": "https://daily-ledger-news.example/",
+      "category": "uncategorized",
+      "domain_age_days": 3120,
+      "bytes_out": 1157
+    },
+    {
+      "id": "ALT-000002",
+      "_truth": {
+        "attack": false,
+        "noise": "vuln_scan"
+      },
+      "source": "ids",
+      "timestamp": "2026-10-24T13:52:37-06:00",
+      "rule": "Vulnerability scan detected",
+      "severity": "low",
+      "sensor": "IDS-CORE-1",
+      "signature": "Nessus scanner activity",
+      "src_host": "SCAN-01",
+      "src_ip": "10.20.9.5",
+      "account": "svc_nessus",
+      "dst_host": "WS-HR-02",
+      "dst_ip": "10.20.6.12",
+      "dst_port": 80,
+      "scan_job": "weekly-internal-scan"
+    },
+    {
+      "id": "ALT-000003",
+      "_truth": {
+        "attack": false,
+        "noise": "printer_auth"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T13:54:05-06:00",
+      "rule": "Repeated authentication failure",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 3,
+      "src_host": "PRN-02",
+      "src_ip": "10.20.7.32",
+      "target_host": "DC-01",
+      "account": "printer.prn02",
+      "failure_count": 3,
+      "failure_reason": "expired password"
+    },
+    {
+      "id": "ALT-000004",
+      "_truth": {
+        "attack": false,
+        "noise": "auth_failed"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T13:54:30-06:00",
+      "rule": "Failed logon",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 2,
+      "src_host": "WS-HR-02",
+      "src_ip": "10.20.6.12",
+      "target_host": "WS-HR-02",
+      "account": "jose.ramirez",
+      "failure_count": 2,
+      "failure_reason": "bad password"
+    },
+    {
+      "id": "ALT-000005",
+      "_truth": {
+        "attack": false,
+        "noise": "auth_failed",
+        "trap": "maria_early_failed_logon"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T13:55:08-06:00",
+      "rule": "Failed logon",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 2,
+      "src_host": "WS-FIN-07",
+      "src_ip": "10.20.4.17",
+      "target_host": "WS-FIN-07",
+      "account": "maria.lopez",
+      "failure_count": 1,
+      "failure_reason": "bad password"
+    },
+    {
+      "id": "ALT-000006",
+      "_truth": {
+        "attack": false,
+        "noise": "system_update"
+      },
+      "source": "edr",
+      "timestamp": "2026-10-24T13:55:09-06:00",
+      "rule": "Windows Update installation / scheduled reboot",
+      "severity": "info",
+      "device": "SRV-APP-02",
+      "device_ip": "10.20.1.22",
+      "account": null,
+      "process": "TiWorker.exe",
+      "parent_process": "svchost.exe",
+      "command_line": "TiWorker.exe -Embedding",
+      "signed": true,
+      "signer": "Microsoft Windows",
+      "action_taken": "none"
+    },
+    {
+      "id": "ALT-000007",
+      "_truth": {
+        "attack": false,
+        "noise": "auth_failed",
+        "trap": "maria_early_failed_logon"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T13:55:41-06:00",
+      "rule": "Failed logon",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 2,
+      "src_host": "WS-FIN-07",
+      "src_ip": "10.20.4.17",
+      "target_host": "WS-FIN-07",
+      "account": "maria.lopez",
+      "failure_count": 1,
+      "failure_reason": "bad password"
+    },
+    {
+      "id": "ALT-000008",
+      "_truth": {
+        "attack": false,
+        "noise": "vuln_scan"
+      },
+      "source": "ids",
+      "timestamp": "2026-10-24T13:55:46-06:00",
+      "rule": "Vulnerability scan detected",
+      "severity": "low",
+      "sensor": "IDS-CORE-1",
+      "signature": "SMB version probe",
+      "src_host": "SCAN-01",
+      "src_ip": "10.20.9.5",
+      "account": "svc_nessus",
+      "dst_host": "WS-OPS-11",
+      "dst_ip": "10.20.3.41",
+      "dst_port": 22,
+      "scan_job": "weekly-internal-scan"
+    },
+    {
+      "id": "ALT-000009",
+      "_truth": {
+        "attack": false,
+        "noise": "proxy_uncategorized"
+      },
+      "source": "proxy",
+      "timestamp": "2026-10-24T13:56:23-06:00",
+      "rule": "Access to uncategorized website",
+      "severity": "info",
+      "client_host": "WS-OPS-11",
+      "client_ip": "10.20.3.41",
+      "user": "ana.torres",
+      "dest_host": "metro-briefing.example",
+      "dest_ip": "203.0.113.121",
+      "method": "GET",
+      "url": "https://metro-briefing.example/",
+      "category": "uncategorized",
+      "domain_age_days": 2410,
+      "bytes_out": 1783
+    },
+    {
+      "id": "ALT-000010",
+      "_truth": {
+        "attack": false,
+        "noise": "vuln_scan"
+      },
+      "source": "ids",
+      "timestamp": "2026-10-24T13:58:19-06:00",
+      "rule": "Vulnerability scan detected",
+      "severity": "low",
+      "sensor": "IDS-CORE-1",
+      "signature": "TLS cipher enumeration",
+      "src_host": "SCAN-01",
+      "src_ip": "10.20.9.5",
+      "account": "svc_nessus",
+      "dst_host": "WS-OPS-04",
+      "dst_ip": "10.20.3.34",
+      "dst_port": 22,
+      "scan_job": "weekly-internal-scan"
+    },
+    {
+      "id": "ALT-000011",
+      "_truth": {
+        "attack": false,
+        "noise": "auth_failed"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T13:59:57-06:00",
+      "rule": "Failed logon",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 2,
+      "src_host": "WS-OPS-11",
+      "src_ip": "10.20.3.41",
+      "target_host": "WS-OPS-11",
+      "account": "ana.torres",
+      "failure_count": 2,
+      "failure_reason": "bad password"
+    },
+    {
+      "id": "ALT-000012",
+      "_truth": {
+        "attack": false,
+        "noise": "vuln_scan"
+      },
+      "source": "ids",
+      "timestamp": "2026-10-24T14:01:12-06:00",
+      "rule": "Vulnerability scan detected",
+      "severity": "low",
+      "sensor": "IDS-CORE-1",
+      "signature": "HTTP directory probe",
+      "src_host": "SCAN-01",
+      "src_ip": "10.20.9.5",
+      "account": "svc_nessus",
+      "dst_host": "WS-LEG-01",
+      "dst_ip": "10.20.8.11",
+      "dst_port": 3389,
+      "scan_job": "weekly-internal-scan"
+    },
+    {
+      "id": "ALT-000013",
+      "_truth": {
+        "attack": false,
+        "noise": "proxy_uncategorized"
+      },
+      "source": "proxy",
+      "timestamp": "2026-10-24T14:01:43-06:00",
+      "rule": "Access to uncategorized website",
+      "severity": "info",
+      "client_host": "WS-LEG-01",
+      "client_ip": "10.20.8.11",
+      "user": "luis.fernandez",
+      "dest_host": "legal-wire-today.example",
+      "dest_ip": "203.0.113.122",
+      "method": "GET",
+      "url": "https://legal-wire-today.example/",
+      "category": "uncategorized",
+      "domain_age_days": 4380,
+      "bytes_out": 3170
+    },
+    {
+      "id": "ALT-000014",
+      "_truth": {
+        "attack": false,
+        "noise": "system_update"
+      },
+      "source": "edr",
+      "timestamp": "2026-10-24T14:01:55-06:00",
+      "rule": "Windows Update installation / scheduled reboot",
+      "severity": "info",
+      "device": "SRV-SQL-01",
+      "device_ip": "10.20.1.31",
+      "account": null,
+      "process": "shutdown.exe",
+      "parent_process": "svchost.exe",
+      "command_line": "shutdown.exe /r /t 600 /d p:2:17",
+      "signed": true,
+      "signer": "Microsoft Windows",
+      "action_taken": "none"
+    },
+    {
+      "id": "ALT-000015",
+      "_truth": {
+        "attack": false,
+        "noise": "av_cleaned"
+      },
+      "source": "edr",
+      "timestamp": "2026-10-24T14:02:08-06:00",
+      "rule": "Antivirus detection - remediated",
+      "severity": "low",
+      "device": "WS-MKT-03",
+      "device_ip": "10.20.5.23",
+      "account": "carlos.mendez",
+      "process": "setup_browsefox.exe",
+      "parent_process": "explorer.exe",
+      "threat_name": "PUA:Win32/BrowseFox",
+      "signed": false,
+      "action_taken": "cleaned"
+    },
+    {
+      "id": "ALT-000016",
+      "_truth": {
+        "attack": true,
+        "step": "A1"
+      },
+      "source": "email_gateway",
+      "timestamp": "2026-10-24T14:02:11-06:00",
+      "rule": "Macro-enabled attachment delivered",
+      "severity": "medium",
+      "recipient": "maria.lopez@novabanco.example",
+      "recipient_host": "WS-FIN-07",
+      "sender": "billing@nb-suppliers.example",
+      "subject": "Overdue invoice 8841",
+      "attachment": "Invoice_8841.docm",
+      "delivery": "delivered"
+    },
+    {
+      "id": "ALT-000017",
+      "_truth": {
+        "attack": false,
+        "noise": "av_cleaned"
+      },
+      "source": "edr",
+      "timestamp": "2026-10-24T14:02:47-06:00",
+      "rule": "Antivirus detection - remediated",
+      "severity": "low",
+      "device": "WS-MKT-03",
+      "device_ip": "10.20.5.23",
+      "account": "carlos.mendez",
+      "process": "setup_browsefox.exe",
+      "parent_process": "explorer.exe",
+      "threat_name": "PUA:Win32/BrowseFox.B",
+      "signed": false,
+      "action_taken": "cleaned"
+    },
+    {
+      "id": "ALT-000018",
+      "_truth": {
+        "attack": false,
+        "noise": "auth_failed"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T14:03:37-06:00",
+      "rule": "Failed logon",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 2,
+      "src_host": "WS-LEG-01",
+      "src_ip": "10.20.8.11",
+      "target_host": "WS-LEG-01",
+      "account": "luis.fernandez",
+      "failure_count": 2,
+      "failure_reason": "bad password"
+    },
+    {
+      "id": "ALT-000019",
+      "_truth": {
+        "attack": false,
+        "noise": "printer_auth"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T14:04:31-06:00",
+      "rule": "Repeated authentication failure",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 3,
+      "src_host": "PRN-02",
+      "src_ip": "10.20.7.32",
+      "target_host": "DC-01",
+      "account": "printer.prn02",
+      "failure_count": 3,
+      "failure_reason": "expired password"
+    },
+    {
+      "id": "ALT-000020",
+      "_truth": {
+        "attack": false,
+        "noise": "vuln_scan"
+      },
+      "source": "ids",
+      "timestamp": "2026-10-24T14:04:55-06:00",
+      "rule": "Vulnerability scan detected",
+      "severity": "low",
+      "sensor": "IDS-CORE-1",
+      "signature": "Nessus scanner activity",
+      "src_host": "SCAN-01",
+      "src_ip": "10.20.9.5",
+      "account": "svc_nessus",
+      "dst_host": "WS-IT-09",
+      "dst_ip": "10.20.2.59",
+      "dst_port": 22,
+      "scan_job": "weekly-internal-scan"
+    },
+    {
+      "id": "ALT-000021",
+      "_truth": {
+        "attack": false,
+        "noise": "proxy_uncategorized"
+      },
+      "source": "proxy",
+      "timestamp": "2026-10-24T14:06:02-06:00",
+      "rule": "Access to uncategorized website",
+      "severity": "info",
+      "client_host": "WS-RISK-05",
+      "client_ip": "10.20.4.65",
+      "user": "sofia.castro",
+      "dest_host": "markets-digest.example",
+      "dest_ip": "203.0.113.123",
+      "method": "GET",
+      "url": "https://markets-digest.example/",
+      "category": "uncategorized",
+      "domain_age_days": 1890,
+      "bytes_out": 3073
+    },
+    {
+      "id": "ALT-000022",
+      "_truth": {
+        "attack": true,
+        "step": "A2"
+      },
+      "source": "edr",
+      "timestamp": "2026-10-24T14:06:12-06:00",
+      "rule": "Suspicious child process of Office application",
+      "severity": "high",
+      "device": "WS-FIN-07",
+      "device_ip": "10.20.4.17",
+      "account": "maria.lopez",
+      "process": "powershell.exe",
+      "parent_process": "WINWORD.EXE",
+      "command_line": "powershell.exe -nop -w hidden -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAKQA=",
+      "signed": false,
+      "action_taken": "none"
+    },
+    {
+      "id": "ALT-000023",
+      "_truth": {
+        "attack": true,
+        "step": "A3"
+      },
+      "source": "proxy",
+      "timestamp": "2026-10-24T14:07:03-06:00",
+      "rule": "Connection to newly registered domain",
+      "severity": "medium",
+      "client_host": "WS-FIN-07",
+      "client_ip": "10.20.4.17",
+      "user": "maria.lopez",
+      "dest_host": "cdn-update-sync.example",
+      "dest_ip": "203.0.113.77",
+      "method": "CONNECT",
+      "url": "https://cdn-update-sync.example/api/v2/sync",
+      "category": "uncategorized",
+      "domain_age_days": 2,
+      "bytes_out": 48211
+    },
+    {
+      "id": "ALT-000024",
+      "_truth": {
+        "attack": false,
+        "noise": "auth_failed"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T14:07:16-06:00",
+      "rule": "Failed logon",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 2,
+      "src_host": "WS-RISK-05",
+      "src_ip": "10.20.4.65",
+      "target_host": "WS-RISK-05",
+      "account": "sofia.castro",
+      "failure_count": 2,
+      "failure_reason": "bad password"
+    },
+    {
+      "id": "ALT-000025",
+      "_truth": {
+        "attack": false,
+        "noise": "system_update"
+      },
+      "source": "edr",
+      "timestamp": "2026-10-24T14:07:19-06:00",
+      "rule": "Windows Update installation / scheduled reboot",
+      "severity": "info",
+      "device": "WS-IT-09",
+      "device_ip": "10.20.2.59",
+      "account": null,
+      "process": "TiWorker.exe",
+      "parent_process": "svchost.exe",
+      "command_line": "TiWorker.exe -Embedding",
+      "signed": true,
+      "signer": "Microsoft Windows",
+      "action_taken": "none"
+    },
+    {
+      "id": "ALT-000026",
+      "_truth": {
+        "attack": false,
+        "noise": "vuln_scan"
+      },
+      "source": "ids",
+      "timestamp": "2026-10-24T14:07:47-06:00",
+      "rule": "Vulnerability scan detected",
+      "severity": "low",
+      "sensor": "IDS-CORE-1",
+      "signature": "SMB version probe",
+      "src_host": "SCAN-01",
+      "src_ip": "10.20.9.5",
+      "account": "svc_nessus",
+      "dst_host": "WS-RISK-05",
+      "dst_ip": "10.20.4.65",
+      "dst_port": 3389,
+      "scan_job": "weekly-internal-scan"
+    },
+    {
+      "id": "ALT-000027",
+      "_truth": {
+        "attack": true,
+        "step": "A4"
+      },
+      "source": "edr",
+      "timestamp": "2026-10-24T14:09:40-06:00",
+      "rule": "Scheduled task created",
+      "severity": "medium",
+      "device": "WS-FIN-07",
+      "device_ip": "10.20.4.17",
+      "account": "maria.lopez",
+      "process": "schtasks.exe",
+      "parent_process": "powershell.exe",
+      "command_line": "schtasks.exe /create /tn \"OneDriveSyncHelper\" /tr \"%APPDATA%\\sync.exe\" /sc onlogon",
+      "task_name": "OneDriveSyncHelper",
+      "file_path": "%APPDATA%\\sync.exe",
+      "signed": false,
+      "action_taken": "none"
+    },
+    {
+      "id": "ALT-000028",
+      "_truth": {
+        "attack": false,
+        "noise": "vuln_scan"
+      },
+      "source": "ids",
+      "timestamp": "2026-10-24T14:10:05-06:00",
+      "rule": "Vulnerability scan detected",
+      "severity": "low",
+      "sensor": "IDS-CORE-1",
+      "signature": "TLS cipher enumeration",
+      "src_host": "SCAN-01",
+      "src_ip": "10.20.9.5",
+      "account": "svc_nessus",
+      "dst_host": "WS-CX-14",
+      "dst_ip": "10.20.5.84",
+      "dst_port": 443,
+      "scan_job": "weekly-internal-scan"
+    },
+    {
+      "id": "ALT-000029",
+      "_truth": {
+        "attack": false,
+        "noise": "proxy_uncategorized"
+      },
+      "source": "proxy",
+      "timestamp": "2026-10-24T14:11:19-06:00",
+      "rule": "Access to uncategorized website",
+      "severity": "info",
+      "client_host": "WS-CX-14",
+      "client_ip": "10.20.5.84",
+      "user": "diego.morales",
+      "dest_host": "city-pulse-news.example",
+      "dest_ip": "203.0.113.124",
+      "method": "GET",
+      "url": "https://city-pulse-news.example/",
+      "category": "uncategorized",
+      "domain_age_days": 2755,
+      "bytes_out": 2098
+    },
+    {
+      "id": "ALT-000030",
+      "_truth": {
+        "attack": false,
+        "noise": "auth_failed"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T14:11:21-06:00",
+      "rule": "Failed logon",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 2,
+      "src_host": "WS-CX-14",
+      "src_ip": "10.20.5.84",
+      "target_host": "WS-CX-14",
+      "account": "diego.morales",
+      "failure_count": 2,
+      "failure_reason": "bad password"
+    },
+    {
+      "id": "ALT-000031",
+      "_truth": {
+        "attack": false,
+        "noise": "system_update"
+      },
+      "source": "edr",
+      "timestamp": "2026-10-24T14:13:46-06:00",
+      "rule": "Windows Update installation / scheduled reboot",
+      "severity": "info",
+      "device": "WS-LEG-01",
+      "device_ip": "10.20.8.11",
+      "account": null,
+      "process": "shutdown.exe",
+      "parent_process": "svchost.exe",
+      "command_line": "shutdown.exe /r /t 600 /d p:2:17",
+      "signed": true,
+      "signer": "Microsoft Windows",
+      "action_taken": "none"
+    },
+    {
+      "id": "ALT-000032",
+      "_truth": {
+        "attack": false,
+        "noise": "vuln_scan"
+      },
+      "source": "ids",
+      "timestamp": "2026-10-24T14:13:56-06:00",
+      "rule": "Vulnerability scan detected",
+      "severity": "low",
+      "sensor": "IDS-CORE-1",
+      "signature": "HTTP directory probe",
+      "src_host": "SCAN-01",
+      "src_ip": "10.20.9.5",
+      "account": "svc_nessus",
+      "dst_host": "WS-AUD-02",
+      "dst_ip": "10.20.8.42",
+      "dst_port": 3389,
+      "scan_job": "weekly-internal-scan"
+    },
+    {
+      "id": "ALT-000033",
+      "_truth": {
+        "attack": false,
+        "noise": "printer_auth"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T14:14:31-06:00",
+      "rule": "Repeated authentication failure",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 3,
+      "src_host": "PRN-02",
+      "src_ip": "10.20.7.32",
+      "target_host": "DC-01",
+      "account": "printer.prn02",
+      "failure_count": 3,
+      "failure_reason": "expired password"
+    },
+    {
+      "id": "ALT-000034",
+      "_truth": {
+        "attack": true,
+        "step": "A5"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T14:15:20-06:00",
+      "rule": "Multiple failed logons from single source",
+      "severity": "high",
+      "outcome": "failure",
+      "logon_type": 3,
+      "src_host": "WS-FIN-07",
+      "src_ip": "10.20.4.17",
+      "target_host": "DC-01",
+      "account": null,
+      "failure_count": 40,
+      "distinct_accounts": 12,
+      "window_seconds": 90,
+      "target_accounts": [
+        "svc_backup",
+        "svc_sql",
+        "svc_web",
+        "admin.ops",
+        "jose.ramirez",
+        "ana.torres",
+        "luis.fernandez",
+        "sofia.castro",
+        "diego.morales",
+        "valeria.rios",
+        "pedro.vargas",
+        "camila.ortiz"
+      ]
+    },
+    {
+      "id": "ALT-000035",
+      "_truth": {
+        "attack": false,
+        "noise": "auth_failed"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T14:16:04-06:00",
+      "rule": "Failed logon",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 2,
+      "src_host": "WS-AUD-02",
+      "src_ip": "10.20.8.42",
+      "target_host": "WS-AUD-02",
+      "account": "valeria.rios",
+      "failure_count": 1,
+      "failure_reason": "bad password"
+    },
+    {
+      "id": "ALT-000036",
+      "_truth": {
+        "attack": false,
+        "noise": "proxy_uncategorized"
+      },
+      "source": "proxy",
+      "timestamp": "2026-10-24T14:16:29-06:00",
+      "rule": "Access to uncategorized website",
+      "severity": "info",
+      "client_host": "WS-AUD-02",
+      "client_ip": "10.20.8.42",
+      "user": "valeria.rios",
+      "dest_host": "weekend-review.example",
+      "dest_ip": "203.0.113.125",
+      "method": "GET",
+      "url": "https://weekend-review.example/",
+      "category": "uncategorized",
+      "domain_age_days": 3640,
+      "bytes_out": 1030
+    },
+    {
+      "id": "ALT-000037",
+      "_truth": {
+        "attack": false,
+        "noise": "vuln_scan"
+      },
+      "source": "ids",
+      "timestamp": "2026-10-24T14:16:54-06:00",
+      "rule": "Vulnerability scan detected",
+      "severity": "low",
+      "sensor": "IDS-CORE-1",
+      "signature": "Nessus scanner activity",
+      "src_host": "SCAN-01",
+      "src_ip": "10.20.9.5",
+      "account": "svc_nessus",
+      "dst_host": "WS-TRS-06",
+      "dst_ip": "10.20.4.96",
+      "dst_port": 3389,
+      "scan_job": "weekly-internal-scan"
+    },
+    {
+      "id": "ALT-000038",
+      "_truth": {
+        "attack": true,
+        "step": "A6"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T14:18:05-06:00",
+      "rule": "Successful logon from new source host",
+      "severity": "medium",
+      "outcome": "success",
+      "logon_type": 3,
+      "src_host": "WS-FIN-07",
+      "src_ip": "10.20.4.17",
+      "target_host": "SRV-FILES-01",
+      "account": "svc_backup",
+      "first_seen_source": true
+    },
+    {
+      "id": "ALT-000039",
+      "_truth": {
+        "attack": false,
+        "noise": "system_update"
+      },
+      "source": "edr",
+      "timestamp": "2026-10-24T14:19:32-06:00",
+      "rule": "Windows Update installation / scheduled reboot",
+      "severity": "info",
+      "device": "WS-AUD-02",
+      "device_ip": "10.20.8.42",
+      "account": null,
+      "process": "TiWorker.exe",
+      "parent_process": "svchost.exe",
+      "command_line": "TiWorker.exe -Embedding",
+      "signed": true,
+      "signer": "Microsoft Windows",
+      "action_taken": "none"
+    },
+    {
+      "id": "ALT-000040",
+      "_truth": {
+        "attack": false,
+        "noise": "vuln_scan"
+      },
+      "source": "ids",
+      "timestamp": "2026-10-24T14:19:39-06:00",
+      "rule": "Vulnerability scan detected",
+      "severity": "low",
+      "sensor": "IDS-CORE-1",
+      "signature": "SMB version probe",
+      "src_host": "SCAN-01",
+      "src_ip": "10.20.9.5",
+      "account": "svc_nessus",
+      "dst_host": "SRV-APP-02",
+      "dst_ip": "10.20.1.22",
+      "dst_port": 443,
+      "scan_job": "weekly-internal-scan"
+    },
+    {
+      "id": "ALT-000041",
+      "_truth": {
+        "attack": true,
+        "step": "A7"
+      },
+      "source": "edr",
+      "timestamp": "2026-10-24T14:20:31-06:00",
+      "rule": "Domain group enumeration",
+      "severity": "medium",
+      "device": "SRV-FILES-01",
+      "device_ip": "10.20.1.10",
+      "account": "svc_backup",
+      "process": "net.exe",
+      "parent_process": "cmd.exe",
+      "command_line": "net group \"Domain Admins\" /domain",
+      "signed": true,
+      "action_taken": "none"
+    },
+    {
+      "id": "ALT-000042",
+      "_truth": {
+        "attack": false,
+        "noise": "auth_failed"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T14:21:53-06:00",
+      "rule": "Failed logon",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 2,
+      "src_host": "WS-TRS-06",
+      "src_ip": "10.20.4.96",
+      "target_host": "WS-TRS-06",
+      "account": "pedro.vargas",
+      "failure_count": 2,
+      "failure_reason": "bad password"
+    },
+    {
+      "id": "ALT-000043",
+      "_truth": {
+        "attack": false,
+        "noise": "proxy_uncategorized"
+      },
+      "source": "proxy",
+      "timestamp": "2026-10-24T14:21:55-06:00",
+      "rule": "Access to uncategorized website",
+      "severity": "info",
+      "client_host": "WS-TRS-06",
+      "client_ip": "10.20.4.96",
+      "user": "pedro.vargas",
+      "dest_host": "econ-snapshot.example",
+      "dest_ip": "203.0.113.126",
+      "method": "GET",
+      "url": "https://econ-snapshot.example/",
+      "category": "uncategorized",
+      "domain_age_days": 1205,
+      "bytes_out": 949
+    },
+    {
+      "id": "ALT-000044",
+      "_truth": {
+        "attack": false,
+        "noise": "vuln_scan"
+      },
+      "source": "ids",
+      "timestamp": "2026-10-24T14:22:25-06:00",
+      "rule": "Vulnerability scan detected",
+      "severity": "low",
+      "sensor": "IDS-CORE-1",
+      "signature": "TLS cipher enumeration",
+      "src_host": "SCAN-01",
+      "src_ip": "10.20.9.5",
+      "account": "svc_nessus",
+      "dst_host": "SRV-SQL-01",
+      "dst_ip": "10.20.1.31",
+      "dst_port": 3389,
+      "scan_job": "weekly-internal-scan"
+    },
+    {
+      "id": "ALT-000045",
+      "_truth": {
+        "attack": true,
+        "step": "A8"
+      },
+      "source": "edr",
+      "timestamp": "2026-10-24T14:22:47-06:00",
+      "rule": "Shadow copy deletion",
+      "severity": "critical",
+      "device": "SRV-FILES-01",
+      "device_ip": "10.20.1.10",
+      "account": "svc_backup",
+      "process": "vssadmin.exe",
+      "parent_process": "cmd.exe",
+      "command_line": "vssadmin delete shadows /all /quiet",
+      "signed": true,
+      "action_taken": "none"
+    },
+    {
+      "id": "ALT-000046",
+      "_truth": {
+        "attack": false,
+        "noise": "printer_auth"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T14:24:40-06:00",
+      "rule": "Repeated authentication failure",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 3,
+      "src_host": "PRN-02",
+      "src_ip": "10.20.7.32",
+      "target_host": "DC-01",
+      "account": "printer.prn02",
+      "failure_count": 3,
+      "failure_reason": "expired password"
+    },
+    {
+      "id": "ALT-000047",
+      "_truth": {
+        "attack": false,
+        "noise": "vuln_scan"
+      },
+      "source": "ids",
+      "timestamp": "2026-10-24T14:25:10-06:00",
+      "rule": "Vulnerability scan detected",
+      "severity": "low",
+      "sensor": "IDS-CORE-1",
+      "signature": "HTTP directory probe",
+      "src_host": "SCAN-01",
+      "src_ip": "10.20.9.5",
+      "account": "svc_nessus",
+      "dst_host": "SRV-WEB-03",
+      "dst_ip": "10.20.1.43",
+      "dst_port": 80,
+      "scan_job": "weekly-internal-scan"
+    },
+    {
+      "id": "ALT-000048",
+      "_truth": {
+        "attack": false,
+        "noise": "system_update"
+      },
+      "source": "edr",
+      "timestamp": "2026-10-24T14:25:10-06:00",
+      "rule": "Windows Update installation / scheduled reboot",
+      "severity": "info",
+      "device": "WS-CX-14",
+      "device_ip": "10.20.5.84",
+      "account": null,
+      "process": "shutdown.exe",
+      "parent_process": "svchost.exe",
+      "command_line": "shutdown.exe /r /t 600 /d p:2:17",
+      "signed": true,
+      "signer": "Microsoft Windows",
+      "action_taken": "none"
+    },
+    {
+      "id": "ALT-000049",
+      "_truth": {
+        "attack": false,
+        "noise": "proxy_uncategorized"
+      },
+      "source": "proxy",
+      "timestamp": "2026-10-24T14:26:25-06:00",
+      "rule": "Access to uncategorized website",
+      "severity": "info",
+      "client_host": "WS-OPS-04",
+      "client_ip": "10.20.3.34",
+      "user": "camila.ortiz",
+      "dest_host": "regional-herald.example",
+      "dest_ip": "203.0.113.127",
+      "method": "GET",
+      "url": "https://regional-herald.example/",
+      "category": "uncategorized",
+      "domain_age_days": 5010,
+      "bytes_out": 1596
+    },
+    {
+      "id": "ALT-000050",
+      "_truth": {
+        "attack": false,
+        "noise": "auth_failed"
+      },
+      "source": "auth",
+      "timestamp": "2026-10-24T14:26:54-06:00",
+      "rule": "Failed logon",
+      "severity": "low",
+      "outcome": "failure",
+      "logon_type": 2,
+      "src_host": "WS-OPS-04",
+      "src_ip": "10.20.3.34",
+      "target_host": "WS-OPS-04",
+      "account": "camila.ortiz",
+      "failure_count": 1,
+      "failure_reason": "bad password"
+    }
+  ]
+}
