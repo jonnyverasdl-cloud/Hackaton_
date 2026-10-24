@@ -10,16 +10,22 @@ are rolled back, so one bad alert can never break later ones.
 
 Times: `scenario_time` is the time of the alert that triggered an action (the
 story the panel tells); `wall_time` / `executed_at` / audit `at` are the real clock.
+
+AI: when an incident changes, it is (re)narrated. Pure-noise incidents get the
+deterministic stub at once; others go to the narrator, in a background worker when
+`ai_async` (the API) so a slow model never blocks ingest. Every call is audited.
 """
 from __future__ import annotations
 
 import copy
+import queue
 import re
 import threading
 from collections import Counter
 from datetime import datetime
 
 from . import actions
+from .ai import AIConfig, Narrator
 from .correlator import build_incident, correlate
 from .normalizer import normalize
 
@@ -35,12 +41,22 @@ class ApprovalError(Exception):
     pass
 
 
+STUB_NARRATOR = Narrator(AIConfig(mode="stub", reason="pure noise: closed by rules, no AI call"))
+
+
 class Store:
-    def __init__(self, window_min: int = 30, clock=now_iso):
+    def __init__(self, window_min: int = 30, clock=now_iso, narrator: Narrator | None = None,
+                 ai_async: bool = False):
         self.window_min = window_min
         self.clock = clock
+        self.narrator = narrator or Narrator(AIConfig(mode="stub", reason="no narrator configured"))
+        self.ai_async = ai_async
         self.lock = threading.RLock()
+        self._queue: queue.Queue[str] = queue.Queue()
+        self._queued: set[str] = set()
         self.reset()
+        if ai_async:
+            threading.Thread(target=self._ai_worker, name="ai-narrator", daemon=True).start()
 
     def reset(self) -> None:
         with self.lock:
@@ -53,6 +69,8 @@ class Store:
             self._next_alert = AUTO_ID_START
             self._next_incident = 1
             self._trigger: dict | None = None
+            self._ai_sig: dict[str, tuple] = {}  # incident id -> signature last narrated
+            self._queued.clear()
 
     # --- ingest ----------------------------------------------------------------
 
@@ -62,7 +80,7 @@ class Store:
         return f"ALT-{self._next_alert:06d}"
 
     _STATE = ("alerts", "by_id", "incidents", "alert_incident", "records", "audit",
-              "_next_alert", "_next_incident")
+              "_next_alert", "_next_incident", "_ai_sig")
 
     def ingest(self, raw: dict) -> tuple[dict, bool]:
         """Normalize, store and re-correlate. Returns (alert, duplicate); duplicates are ignored.
@@ -88,7 +106,63 @@ class Store:
                 raise ValueError(f"alert rejected, correlation failed: {exc}") from exc
             finally:
                 self._trigger = None
+            self._schedule_ai()
             return alert, False
+
+    # --- AI narration -------------------------------------------------------------
+
+    @staticmethod
+    def _signature(incident: dict) -> tuple:
+        return tuple(incident["alerts"]), incident["verdict"], incident["risk_score"]
+
+    def _schedule_ai(self) -> None:
+        for incident_id, incident in list(self.incidents.items()):
+            if self._ai_sig.get(incident_id) == self._signature(incident):
+                continue
+            if incident["autonomy"] == "auto_closed":  # pure noise: no model call needed
+                incident["ai"] = STUB_NARRATOR.narrate(incident)
+                self._ai_sig[incident_id] = self._signature(incident)
+            elif self.ai_async:
+                if incident_id not in self._queued:
+                    self._queued.add(incident_id)
+                    self._queue.put(incident_id)
+            else:
+                self._narrate(incident_id)
+
+    def _ai_worker(self) -> None:
+        while True:
+            incident_id = self._queue.get()
+            try:
+                self._narrate(incident_id)
+            except Exception:  # the worker must survive anything
+                pass
+
+    def _narrate(self, incident_id: str) -> None:
+        with self.lock:
+            self._queued.discard(incident_id)
+            incident = copy.deepcopy(self.incidents.get(incident_id))
+            if incident is None:
+                return
+            # Mark as narrated now, so unrelated ingests during the call don't queue the same work.
+            self._ai_sig[incident_id] = self._signature(incident)
+        block = self.narrator.narrate(incident)  # outside the lock: may take up to the timeout
+        with self.lock:
+            current = self.incidents.get(incident_id)
+            if current is None:
+                return
+            current["ai"] = block
+            if not self.narrator.live:
+                return  # no model configured: nothing was called, nothing to audit
+            trace = block["trace"]
+            ok = block["generated_by"] != "stub"
+            label = (f"AI narrative generated ({block['generated_by']})" if ok
+                     else "AI unavailable: rules-only stub narrative")
+            reason = (f"model {trace['model']}, {trace['latency_ms']} ms, {len(block['flags'])} flag(s), "
+                      f"prompt sha256 {trace['prompt_sha256'][:12]}")
+            if trace["error"]:
+                reason += f"; fallback: {trace['error']}"
+            self._log(incident_id, "ai_narrative", label, f"ai:{block['generated_by']}", reason,
+                      scenario_time=incident["window"]["end"])
 
     def _recorrelate(self) -> None:
         incidents: dict[str, dict] = {}

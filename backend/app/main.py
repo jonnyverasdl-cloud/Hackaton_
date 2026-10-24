@@ -15,6 +15,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from .ai import Narrator
 from .store import ApprovalError, Store
 
 PANEL_DIR = Path(__file__).resolve().parents[2] / "panel"
@@ -26,14 +27,20 @@ class ApproveRequest(BaseModel):
 
 def create_app(store: Store | None = None) -> FastAPI:
     load_dotenv()  # never overrides variables that are already set
-    store = store or Store(window_min=int(os.getenv("CORRELATION_WINDOW_MIN", "30")))
+    store = store or Store(window_min=int(os.getenv("CORRELATION_WINDOW_MIN", "30")),
+                           narrator=Narrator(), ai_async=True)
     app = FastAPI(title="Storyline — alert correlation & incident timeline (synthetic data)")
     app.state.store = store
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "synthetic": True, "ai_model": "stub", "mode": "rules-only",
+        n = store.narrator
+        return {"status": "ok", "synthetic": True,
+                "ai_model": n.config.model if n.live else "stub",
+                "mode": "rules+ai" if n.live else "rules-only",
+                "ai": {"mode": n.config.mode, "reason": n.config.reason or None, "calls": n.calls,
+                       "last_latency_ms": n.last_latency_ms, "last_error": n.last_error},
                 "counts": store.counts()}
 
     @app.post("/alerts", status_code=201)

@@ -114,3 +114,11 @@ Esa es la respuesta a "Audit-First con autonomía": actúa donde se puede deshac
   `suppressed_noise` (`count`, `by_type`); `GET /health` devuelve `counts`
   (`alerts`, `incidents`, `suppressed_noise`, `pending_approvals`). `POST /reset` limpia el estado.
 - `POST /alerts` ignora IDs repetidos (`duplicate: true`), así `--replay` se puede repetir.
+
+**IA (tarea 5):** `ai` añade `trace` (`model`, `prompt_sha256`, `latency_ms`, `raw_response`,
+`error`, `called_at`), `flags` (cada host/usuario/IP/dominio/hora/fecha que la IA menciona y no está
+en el incidente: `{type, value, field}`) y `alerts_covered`. Timeout 30 s; sin credenciales, error,
+timeout o JSON inválido → stub determinista (`generated_by: "stub"`). Cada llamada real al modelo
+queda en `/audit` (`action: "ai_narrative"`, `executed_by: "ai:<modelo>"` o `"ai:stub"` si cayó al
+stub). Los incidentes de ruido puro reciben el stub sin llamar al modelo. `/health` añade `ai`
+(`mode`, `reason`, `calls`, `last_latency_ms`, `last_error`). La IA nunca cambia acciones.

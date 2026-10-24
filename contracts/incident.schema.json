@@ -85,7 +85,33 @@
         "hypothesis": {"type": "string"},
         "recommended_actions": {"type": "array", "items": {"type": "string"}},
         "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-        "generated_by": {"type": "string"}
+        "generated_by": {"type": "string"},
+        "alerts_covered": {"type": "integer", "minimum": 0},
+        "trace": {
+          "type": "object",
+          "required": ["model", "prompt_sha256", "latency_ms", "raw_response", "error", "called_at"],
+          "properties": {
+            "model": {"type": "string"},
+            "prompt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "latency_ms": {"type": "integer", "minimum": 0},
+            "raw_response": {"type": ["string", "null"]},
+            "error": {"type": ["string", "null"]},
+            "called_at": {"$ref": "#/$defs/timestamp"}
+          }
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "value", "field"],
+            "properties": {
+              "type": {"enum": ["unknown_host", "unknown_user", "unknown_ip", "unknown_domain",
+                                "unknown_time", "unknown_date"]},
+              "value": {"type": "string"},
+              "field": {"enum": ["narrative", "hypothesis", "recommended_actions"]}
+            }
+          }
+        }
       }
     },
     "action": {
