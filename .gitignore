@@ -1,0 +1,10 @@
+.env
+*-sa.json
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+evidence/
+.vscode/
+.DS_Store
+Thumbs.db
