@@ -122,3 +122,8 @@ timeout o JSON inválido → stub determinista (`generated_by: "stub"`). Cada ll
 queda en `/audit` (`action: "ai_narrative"`, `executed_by: "ai:<modelo>"` o `"ai:stub"` si cayó al
 stub). Los incidentes de ruido puro reciben el stub sin llamar al modelo. `/health` añade `ai`
 (`mode`, `reason`, `calls`, `last_latency_ms`, `last_error`). La IA nunca cambia acciones.
+`trace.error` y `/health.ai.last_error` solo llevan el **tipo** de excepción (p. ej.
+`PermissionError`); el texto completo de Vertex (puede nombrar proyecto o cuenta de servicio) va solo
+al log del servidor. IDs `ALT-900000`+ reservados al servidor (422 si los manda un cliente). El panel
+usa fuentes del sistema: el único host externo es Vertex AI. Fixtures del modo offline:
+`tools/build_fixtures.py` (+ `tools/record_ai.py`, una llamada real grabada).
