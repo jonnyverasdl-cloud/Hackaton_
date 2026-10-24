@@ -12,12 +12,15 @@ from __future__ import annotations
 import concurrent.futures
 import hashlib
 import json
+import logging
 import os
 import re
 import time
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
+
+log = logging.getLogger("storyline.ai")
 
 DEFAULT_MODEL = "gemini-2.5-flash"
 DEFAULT_LOCATION = "us-central1"
@@ -116,7 +119,12 @@ def prompt_hash(prompt: str) -> str:
 
 # --- entity verification ---------------------------------------------------------
 
-_FILE_EXT = (".exe", ".docm", ".dll", ".ps1", ".bat", ".js", ".vbs", ".hta", ".xlsm", ".docx")
+_FILE_EXT = tuple("." + e for e in (
+    "exe dll sys msi lnk ps1 psm1 bat cmd js vbs hta wsf scr docm docx doc xlsm xlsx xls pptm pptx pdf "
+    "txt log csv json xml yml yaml ini cfg conf dat bin tmp iso img zip rar 7z gz tar png jpg gif html htm "
+    "eml msg py sh").split())
+_NOT_ENTITY = re.compile(r"\b(?:CVE-\d{4}-\d+|SHA-?\d+|MD5|ALT-\d+|INC-\d+)\b", re.IGNORECASE)
+_FIRST_LAST = re.compile(r"[a-z]+\.[a-z]+", re.IGNORECASE)  # user shape: first.last
 _TLDS = (".example", ".com", ".net", ".org", ".io", ".ru", ".cn", ".info", ".biz", ".xyz", ".top")
 _EMAIL = re.compile(r"\b[\w.+-]+@([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b", re.IGNORECASE)
 _IP = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
@@ -134,7 +142,7 @@ def verify_entities(output: dict, incident: dict, today: date | None = None) -> 
     times |= {datetime.fromisoformat(incident["window"][k]).strftime("%H:%M") for k in ("start", "end")}
     dates = {datetime.fromisoformat(e["timestamp"]).date().isoformat() for e in incident["timeline"]}
     dates.add((today or date.today()).isoformat())
-    hosts, users = set(ents["hosts"]), set(ents["users"])
+    hosts, users = {h.upper() for h in ents["hosts"]}, {u.lower() for u in ents["users"]}
     domains, ips = {d.lower() for d in ents["domains"]}, set(ents["ips"])
     flags: list[dict] = []
 
@@ -154,6 +162,7 @@ def verify_entities(output: dict, incident: dict, today: date | None = None) -> 
             if ip not in ips:
                 flag("unknown_ip", ip, field)
         text = _IP.sub(" ", text)
+        text = _NOT_ENTITY.sub(" ", text)  # CVE ids, hash names, alert/incident ids
         for token in _DOTTED.findall(text):
             low = token.lower().rstrip(".")
             if low.endswith(_FILE_EXT) or not re.search(r"[a-z]{2}", low):
@@ -161,14 +170,14 @@ def verify_entities(output: dict, incident: dict, today: date | None = None) -> 
             if low.endswith(_TLDS):
                 if low not in domains:
                     flag("unknown_domain", token, field)
-            elif token not in users:
-                flag("unknown_user", token, field)
+            elif _FIRST_LAST.fullmatch(low) and low not in users:
+                flag("unknown_user", token, field)  # other dotted tokens (System.Net.WebClient) are code
         text = _DOTTED.sub(" ", text)
         for u in _SVC_USER.findall(text):
-            if u not in users:
+            if u.lower() not in users:
                 flag("unknown_user", u, field)
         for h in _HOST.findall(text):
-            if h not in hosts and not h.startswith(("ALT-", "INC-")):
+            if h.upper() not in hosts:
                 flag("unknown_host", h, field)
         for t in _TIME.findall(text):
             if t not in times:
@@ -239,13 +248,16 @@ class Narrator:
                 response_mime_type="application/json", response_schema=RESPONSE_SCHEMA))
         return response.text or ""
 
-    def narrate(self, incident: dict) -> dict:
-        """Return the incident's `ai` block: output + generated_by + trace + flags."""
+    def narrate(self, incident: dict, called_at: str | None = None) -> dict:
+        """Return the incident's `ai` block: output + generated_by + trace + flags.
+
+        `called_at` lets the caller stamp the trace with its own clock (the store's).
+        """
         today = self._today or date.today()
         prompt = build_prompt(incident, today)
         trace = {"model": self.config.model if self.live else "stub", "prompt_sha256": prompt_hash(prompt),
                  "latency_ms": 0, "raw_response": None, "error": None,
-                 "called_at": datetime.now().astimezone().isoformat(timespec="seconds")}
+                 "called_at": called_at or datetime.now().astimezone().isoformat(timespec="seconds")}
         output, generated_by = None, "stub"
         if self.live:
             self.calls += 1
@@ -258,7 +270,10 @@ class Narrator:
             except concurrent.futures.TimeoutError:
                 trace["error"] = f"timeout after {self.config.timeout_s:g} s"
             except Exception as exc:  # network, auth, quota, bad JSON: fall back, never crash
-                trace["error"] = f"{type(exc).__name__}: {str(exc)[:300]}"
+                # Vertex error text can name the project or service account: only the type
+                # reaches the trace, panel and /audit; the full text stays in the server log.
+                trace["error"] = type(exc).__name__
+                log.warning("AI call failed for %s: %s: %s", incident["incident_id"], type(exc).__name__, exc)
             finally:
                 pool.shutdown(wait=False, cancel_futures=True)
                 trace["latency_ms"] = int((time.perf_counter() - start) * 1000)

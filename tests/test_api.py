@@ -377,7 +377,7 @@ def test_audit4_reopen_reverts_close_and_explains(monkeypatch):
     INCIDENT_SCHEMA.validate(inc)
 
 
-@pytest.mark.parametrize("bad_id", [5, {"a": 1}, "X-1", "ALT-12", "alt-000001"])
+@pytest.mark.parametrize("bad_id", [5, {"a": 1}, "X-1", "ALT-12", "alt-000001", "ALT-900001", "ALT-999999"])
 def test_audit5_client_ids_must_be_alt_format(bad_id):
     c = new_client()
     body = {**gs.public_view(RAW[0]), "id": bad_id}
@@ -433,3 +433,37 @@ def test_designer2_extension_reason_in_scenario(client):
                if e["incident_id"] == inc["incident_id"] and e["action"] == "collect_triage"]
     assert [e["targets"] for e in entries] == [["WS-FIN-07"], ["SRV-FILES-01"]]
     assert not entries[0]["reason"].startswith("extended") and entries[1]["reason"].startswith("extended")
+
+
+# --- follow-up: naive timestamp first (#8), merge of a closed incident (#7) -------
+
+def test_naive_timestamp_into_empty_store_rejected():
+    c = new_client()
+    naive = {**gs.public_view(RAW[0]), "timestamp": "2026-10-24T13:51:59"}
+    assert c.post("/alerts", json=naive).status_code == 422
+    assert c.get("/alerts").json() == []
+    assert c.post("/alerts", json=gs.public_view(RAW[0])).status_code == 201
+    assert c.post("/alerts", json=gs.public_view(RAW[1])).status_code == 201
+
+
+def test_closed_incident_merged_into_open_one_is_reverted(monkeypatch):
+    s = Store(window_min=30)
+    # Only the WS-C/WS-D pair counts as "known noise", so it closes on its own.
+    monkeypatch.setattr(actions, "is_pure_noise", lambda alerts: {a["host"] for a in alerts} <= {"WS-C", "WS-D"})
+    x = {**PROXY, "dest_host": "x.example", "dest_ip": "203.0.113.60"}
+    y = {**PROXY, "dest_host": "y.example", "dest_ip": "203.0.113.61"}
+    s.ingest({**x, "id": "ALT-000801", "timestamp": "2026-10-24T14:00:00-06:00", "client_host": "WS-A", "client_ip": "10.20.0.1"})
+    s.ingest({**x, "id": "ALT-000802", "timestamp": "2026-10-24T14:01:00-06:00", "client_host": "WS-B", "client_ip": "10.20.0.2"})
+    s.ingest({**y, "id": "ALT-000803", "timestamp": "2026-10-24T14:02:00-06:00", "client_host": "WS-C", "client_ip": "10.20.0.3"})
+    s.ingest({**y, "id": "ALT-000804", "timestamp": "2026-10-24T14:03:00-06:00", "client_host": "WS-D", "client_ip": "10.20.0.4"})
+    assert {i: inc["status"] for i, inc in s.incidents.items()} == {"INC-0001": "open", "INC-0002": "closed"}
+    # A bridge alert: domain y (links WS-C/WS-D) and the IP of x (links WS-A/WS-B).
+    s.ingest({**y, "id": "ALT-000805", "timestamp": "2026-10-24T14:04:00-06:00", "client_host": "WS-E",
+              "client_ip": "10.20.0.5", "dest_ip": "203.0.113.60"})
+    assert list(s.incidents) == ["INC-0001"]
+    inc = s.incidents["INC-0001"]
+    assert inc["status"] == "open"
+    close = next(a for a in inc["actions"] if a["id"] == "close_benign")
+    assert close["status"] == "reverted" and close["reason"].startswith("reverted, merged closed incident")
+    assert [e["action"] for e in s.audit if e["action"] in ("merge", "reopen")] == ["merge", "reopen"]
+    INCIDENT_SCHEMA.validate(inc)

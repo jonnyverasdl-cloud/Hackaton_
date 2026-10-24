@@ -61,7 +61,7 @@
     "latency_ms": 0,
     "raw_response": null,
     "error": "pure noise: closed by rules, no AI call",
-    "called_at": "2026-10-24T10:53:06-06:00"
+    "called_at": "2026-10-24T10:26:07-06:00"
    },
    "flags": [],
    "alerts_covered": 2
@@ -228,7 +228,7 @@
     "latency_ms": 0,
     "raw_response": null,
     "error": "pure noise: closed by rules, no AI call",
-    "called_at": "2026-10-24T10:53:06-06:00"
+    "called_at": "2026-10-24T10:26:45-06:00"
    },
    "flags": [],
    "alerts_covered": 12
@@ -601,7 +601,7 @@
     "latency_ms": 0,
     "raw_response": null,
     "error": "pure noise: closed by rules, no AI call",
-    "called_at": "2026-10-24T10:53:06-06:00"
+    "called_at": "2026-10-24T10:26:16-06:00"
    },
    "flags": [],
    "alerts_covered": 2
@@ -704,7 +704,7 @@
     "latency_ms": 0,
     "raw_response": null,
     "error": "pure noise: closed by rules, no AI call",
-    "called_at": "2026-10-24T10:53:06-06:00"
+    "called_at": "2026-10-24T10:26:44-06:00"
    },
    "flags": [],
    "alerts_covered": 4

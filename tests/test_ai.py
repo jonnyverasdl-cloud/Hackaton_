@@ -112,15 +112,15 @@ def test_default_timeout_is_30s():
 
 
 @pytest.mark.parametrize("behavior,error", [
-    (lambda p: (_ for _ in ()).throw(ConnectionError("network down")), "ConnectionError: network down"),
+    (lambda p: (_ for _ in ()).throw(ConnectionError("network down")), "ConnectionError"),
     (lambda p: Resp("not json at all"), "JSONDecodeError"),
-    (lambda p: Resp(json.dumps({"narrative": "x"})), "ValueError: response does not match"),
+    (lambda p: Resp(json.dumps({"narrative": "x"})), "ValueError"),
     (lambda p: Resp(json.dumps({**GOOD, "recommended_actions": "isolate"})), "ValueError"),
 ])
 def test_errors_fall_back_to_stub(attack_incident, behavior, error):
     n, _ = narrator(behavior)
     block = n.narrate(attack_incident)
-    assert block["generated_by"] == "stub" and block["trace"]["error"].startswith(error)
+    assert block["generated_by"] == "stub" and block["trace"]["error"] == error  # type only
     assert n.last_error == block["trace"]["error"]
 
 
@@ -300,3 +300,88 @@ def test_no_duplicate_call_when_unrelated_alerts_arrive_mid_call():
     attack_id = _attack(s)["incident_id"]
     prompts = [c["contents"] for c in client.calls if f'"incident_id": "{attack_id}"' in c["contents"]]
     assert len(prompts) == len(set(prompts)), "same incident state narrated twice"
+
+
+# --- follow-up: secrets in errors (#6), entity false positives (#5), reset race (#4) ---
+
+SECRET_ERROR = ("403 Permission denied on resource project demo-proj-123 for "
+                "storyline-sa@demo-proj-123.iam.gserviceaccount.com")
+
+
+def test_vertex_error_text_never_leaves_the_server(attack_incident, caplog):
+    def denied(prompt):
+        raise PermissionError(SECRET_ERROR)
+
+    n, _ = narrator(denied)
+    s = Store(window_min=30, narrator=n)
+    with caplog.at_level("WARNING", logger="storyline.ai"):
+        for r in RAW:
+            s.ingest(gs.public_view(r))
+    attack = _attack(s)
+    assert attack["ai"]["trace"]["error"] == "PermissionError" and n.last_error == "PermissionError"
+    public = json.dumps([attack, s.audit, s.audit_view()])
+    assert "gserviceaccount" not in public and "demo-proj-123" not in public
+    health = TestClient(create_app(s)).get("/health").text
+    assert "gserviceaccount" not in health and "demo-proj-123" not in health
+    assert SECRET_ERROR in caplog.text  # full text only in the server log
+
+
+def test_no_false_flags_for_cve_hashes_files_and_case(attack_incident):
+    text = ("The macro may exploit CVE-2017-11882; SHA-256 and MD5 of invoice.pdf, payload.bin and "
+            "README.txt were collected; System.Net.WebClient fetched sync.exe. Maria.Lopez and "
+            "SVC_BACKUP on ws-fin-07 / Srv-Files-01 (ALT-000038, INC-0003).")
+    out = {"narrative": text, "hypothesis": "", "recommended_actions": [], "confidence": 0.5}
+    assert verify_entities(out, attack_incident, TODAY) == []
+
+
+def test_invented_entities_still_flagged_next_to_cves(attack_incident):
+    out = {"narrative": "CVE-2021-40444 on WS-EVIL-99 by john.doe via evil.example", "hypothesis": "",
+           "recommended_actions": [], "confidence": 0.5}
+    flags = {(f["type"], f["value"]) for f in verify_entities(out, attack_incident, TODAY)}
+    assert flags == {("unknown_host", "WS-EVIL-99"), ("unknown_user", "john.doe"),
+                     ("unknown_domain", "evil.example")}
+
+
+class GatedClient:
+    """Fake client whose calls block until released: deterministic, no sleeps."""
+
+    def __init__(self):
+        import threading
+        self.calls, self.started, self.release = [], threading.Event(), threading.Event()
+        outer = self
+
+        class Models:
+            def generate_content(self, model, contents, config):
+                outer.calls.append(contents)
+                outer.started.set()
+                outer.release.wait(5)
+                return Resp(json.dumps(GOOD))
+
+        self.models = Models()
+
+
+def test_reset_during_call_drops_stale_result_and_audit():
+    client = GatedClient()
+    n = Narrator(AIConfig(mode="vertex", model="gemini-test"), client=client, today=TODAY)
+    s = Store(window_min=30, narrator=n, ai_async=True)
+    for r in RAW:
+        s.ingest(gs.public_view(r))
+    assert client.started.wait(5)  # a call is now in flight
+    s.reset()
+    assert s.audit == [] and s.incidents == {}
+    for r in RAW:  # the demo is replayed: the same incident exists again
+        s.ingest(gs.public_view(r))
+    client.release.set()  # only now does the pre-reset call return
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        with s.lock:
+            block = _attack(s)["ai"]
+            if block and block["alerts_covered"] == 8:
+                break
+        time.sleep(0.05)
+    with s.lock:
+        ai_entries = [e for e in s.audit if e["action"] == "ai_narrative"]
+        prompts = [c for c in client.calls[1:]]
+    assert block["generated_by"] == "gemini-test" and block["alerts_covered"] == 8
+    assert len(prompts) == len(set(prompts)), "a state was narrated twice after reset"
+    assert len(ai_entries) == len(client.calls) - 1  # the pre-reset call left no audit entry

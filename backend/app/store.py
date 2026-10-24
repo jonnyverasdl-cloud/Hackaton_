@@ -52,8 +52,9 @@ class Store:
         self.narrator = narrator or Narrator(AIConfig(mode="stub", reason="no narrator configured"))
         self.ai_async = ai_async
         self.lock = threading.RLock()
-        self._queue: queue.Queue[str] = queue.Queue()
+        self._queue: queue.Queue[tuple[int, str]] = queue.Queue()
         self._queued: set[str] = set()
+        self._gen = 0  # bumped by reset(): AI work from an older generation is dropped
         self.reset()
         if ai_async:
             threading.Thread(target=self._ai_worker, name="ai-narrator", daemon=True).start()
@@ -71,6 +72,7 @@ class Store:
             self._trigger: dict | None = None
             self._ai_sig: dict[str, tuple] = {}  # incident id -> signature last narrated
             self._queued.clear()
+            self._gen += 1
 
     # --- ingest ----------------------------------------------------------------
 
@@ -91,6 +93,8 @@ class Store:
             rid = raw.get("id")
             if rid is not None and not (isinstance(rid, str) and CLIENT_ID.match(rid)):
                 raise ValueError("id must be a string like ALT-000123")
+            if rid is not None and int(rid[4:]) >= AUTO_ID_START - 1:
+                raise ValueError("ids ALT-900000 and above are reserved for server-assigned ids")
             if rid in self.by_id:
                 return self.by_id[rid], True
             alert = normalize(raw, alert_id=rid or self._new_alert_id())
@@ -120,36 +124,41 @@ class Store:
             if self._ai_sig.get(incident_id) == self._signature(incident):
                 continue
             if incident["autonomy"] == "auto_closed":  # pure noise: no model call needed
-                incident["ai"] = STUB_NARRATOR.narrate(incident)
+                incident["ai"] = STUB_NARRATOR.narrate(incident, called_at=self.clock())
                 self._ai_sig[incident_id] = self._signature(incident)
             elif self.ai_async:
                 if incident_id not in self._queued:
                     self._queued.add(incident_id)
-                    self._queue.put(incident_id)
+                    self._queue.put((self._gen, incident_id))
             else:
-                self._narrate(incident_id)
+                self._narrate(incident_id, self._gen)
 
     def _ai_worker(self) -> None:
         while True:
-            incident_id = self._queue.get()
+            gen, incident_id = self._queue.get()
             try:
-                self._narrate(incident_id)
+                self._narrate(incident_id, gen)
             except Exception:  # the worker must survive anything
                 pass
 
-    def _narrate(self, incident_id: str) -> None:
+    def _narrate(self, incident_id: str, gen: int) -> None:
         with self.lock:
+            if gen != self._gen:
+                return  # queued before a reset: belongs to a run that no longer exists
             self._queued.discard(incident_id)
             incident = copy.deepcopy(self.incidents.get(incident_id))
-            if incident is None:
-                return
+            if incident is None or self._ai_sig.get(incident_id) == self._signature(incident):
+                return  # gone, or this exact state was already narrated
             # Mark as narrated now, so unrelated ingests during the call don't queue the same work.
             self._ai_sig[incident_id] = self._signature(incident)
-        block = self.narrator.narrate(incident)  # outside the lock: may take up to the timeout
+            if incident["autonomy"] == "auto_closed":  # became pure noise while queued
+                self.incidents[incident_id]["ai"] = STUB_NARRATOR.narrate(incident, called_at=self.clock())
+                return
+        block = self.narrator.narrate(incident, called_at=self.clock())  # outside the lock: may take up to the timeout
         with self.lock:
             current = self.incidents.get(incident_id)
-            if current is None:
-                return
+            if gen != self._gen or current is None:
+                return  # reset (or incident gone) during the call: drop the stale result
             current["ai"] = block
             if not self.narrator.live:
                 return  # no model configured: nothing was called, nothing to audit
@@ -215,10 +224,12 @@ class Store:
             incident["status"], autonomy = "approved", "approved"
         else:
             incident["status"] = "open"
-        if previous and previous["status"] == "closed" and incident["status"] != "closed":
-            why = f"new evidence: score {incident['risk_score']}, {incident['verdict']}, now {autonomy}"
-            if "close_benign" in recs:
-                recs["close_benign"].update(reverted=True, reason=f"reverted, {why}")
+        closed_rec = recs.get("close_benign")
+        if incident["status"] != "closed" and closed_rec and not closed_rec["reverted"]:
+            # Reopened by new evidence, or a closed incident was merged into this open one.
+            cause = "new evidence" if previous and previous["status"] == "closed" else "merged closed incident"
+            why = f"{cause}: score {incident['risk_score']}, {incident['verdict']}, now {autonomy}"
+            closed_rec.update(reverted=True, reason=f"reverted, {why}")
             self._log(incident_id, "reopen", f"Reopened {incident_id}", "system", why,
                       scenario_time=trigger_time)
         incident["autonomy"] = autonomy

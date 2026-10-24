@@ -1,0 +1,24 @@
+{
+ "incident_id": "INC-0003",
+ "ai": {
+  "narrative": "At 14:02, an initial access attempt occurred when maria.lopez received a macro-enabled attachment from billing@nb-suppliers.example. By 14:06, WINWORD.EXE spawned powershell.exe with an encoded command on WS-FIN-07, indicating execution. Shortly after at 14:07, WS-FIN-07 connected to the newly registered domain cdn-update-sync.example (203.0.113.77) for command and control. Persistence was established at 14:09 with the creation of a scheduled task named OneDriveSyncHelper on WS-FIN-07. At 14:15, 40 failed logon attempts were observed from WS-FIN-07 against 12 accounts, suggesting credential access activity. Lateral movement was detected at 14:18 when svc_backup logged on to SRV-FILES-01 from WS-FIN-07 for the first time. Discovery activity followed at 14:20, with svc_backup running `net group \"Domain Admins\" /domain` on SRV-FILES-01. Finally, at 14:22, svc_backup executed `vssadmin delete shadows /all /quiet` on SRV-FILES-01, indicating an impact stage activity consistent with pre-ransomware behavior.",
+  "hypothesis": "The attacker gained initial access via a phishing email, established persistence and command and control on WS-FIN-07, then moved laterally to SRV-FILES-01 using compromised credentials to prepare for a ransomware attack by deleting shadow copies.",
+  "recommended_actions": [
+   "Immediately isolate WS-FIN-07 and SRV-FILES-01 from the network using EDR to prevent further compromise.",
+   "Disable the svc_backup account and force a password reset for all associated services and applications.",
+   "Kill the process and remove the persistence mechanism related to OneDriveSyncHelper (%APPDATA%\\sync.exe) on WS-FIN-07."
+  ],
+  "confidence": 0.9,
+  "generated_by": "gemini-2.5-flash",
+  "trace": {
+   "model": "gemini-2.5-flash",
+   "prompt_sha256": "9a6b3ea0fb58950094fbb741aa9a4d4bdd2226a518ffdec2d24de2297129eab9",
+   "latency_ms": 7414,
+   "raw_response": "{\n  \"narrative\": \"At 14:02, an initial access attempt occurred when maria.lopez received a macro-enabled attachment from billing@nb-suppliers.example. By 14:06, WINWORD.EXE spawned powershell.exe with an encoded command on WS-FIN-07, indicating execution. Shortly after at 14:07, WS-FIN-07 connected to the newly registered domain cdn-update-sync.example (203.0.113.77) for command and control. Persistence was established at 14:09 with the creation of a scheduled task named OneDriveSyncHelper on WS-FIN-07. At 14:15, 40 failed logon attempts were observed from WS-FIN-07 against 12 accounts, suggesting credential access activity. Lateral movement was detected at 14:18 when svc_backup logged on to SRV-FILES-01 from WS-FIN-07 for the first time. Discovery activity followed at 14:20, with svc_backup running `net group \\\"Domain Admins\\\" /domain` on SRV-FILES-01. Finally, at 14:22, svc_backup executed `vssadmin delete shadows /all /quiet` on SRV-FILES-01, indicating an impact stage activity consistent with pre-ransomware behavior.\",\n  \"hypothesis\": \"The attacker gained initial access via a phishing email, established persistence and command and control on WS-FIN-07, then moved laterally to SRV-FILES-01 using compromised credentials to prepare for a ransomware attack by deleting shadow copies.\",\n  \"recommended_actions\": [\n    \"Immediately isolate WS-FIN-07 and SRV-FILES-01 from the network using EDR to prevent further compromise.\",\n    \"Disable the svc_backup account and force a password reset for all associated services and applications.\",\n    \"Kill the process and remove the persistence mechanism related to OneDriveSyncHelper (%APPDATA%\\\\sync.exe) on WS-FIN-07.\"\n  ],\n  \"confidence\": 0.9\n}",
+   "error": null,
+   "called_at": "2026-10-24T10:51:32-06:00"
+  },
+  "flags": [],
+  "alerts_covered": 8
+ }
+}

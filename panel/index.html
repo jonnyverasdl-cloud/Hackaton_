@@ -4,15 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Storyline · SOC panel</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#0a0e14;--panel:#111722;--panel2:#161e2b;--line:#243044;--line2:#2f3d55;
   --text:#e6edf6;--dim:#93a1b5;--faint:#5f6d82;
   --red:#ff4d5e;--red-bg:#3a1219;--amber:#ffb627;--amber-bg:#3a2a08;--green:#3ddc84;--green-bg:#0d2e1d;
   --blue:#4da3ff;--blue-bg:#0d2440;--violet:#b48cff;--cyan:#38d6e0;--orange:#ff8a4c;
-  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;--sans:'Inter',system-ui,Segoe UI,sans-serif;
+  --mono:ui-monospace,'Cascadia Mono',Consolas,'Courier New',monospace;--sans:system-ui,'Segoe UI',Roboto,Arial,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
@@ -231,7 +229,9 @@ const live={
   health(){return this.get("/health");}, alerts(){return this.get("/alerts");}, incidents(){return this.get("/incidents");},
   incident(id){return this.get("/incidents/"+encodeURIComponent(id));}, audit(){return this.get("/audit");},
   async approve(id,by){const r=await fetch(API+"/incidents/"+encodeURIComponent(id)+"/approve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({approved_by:by}),signal:AbortSignal.timeout(4000)});
-    if(!r.ok){let m;try{m=(await r.json()).detail;}catch(_){}throw new Error(typeof m==="string"?m:`approve → ${r.status}`);}return r.json();},
+    if(!r.ok){let m;try{m=(await r.json()).detail;}catch(_){}
+      if(Array.isArray(m))m=m.map(x=>x&&x.msg).filter(Boolean).join("; ");
+      throw new Error(typeof m==="string"&&m?m:`approve → ${r.status}`);}return r.json();},
   async reset(){const r=await fetch(API+"/reset",{method:"POST",signal:AbortSignal.timeout(4000)});if(!r.ok)throw new Error(`reset → ${r.status}`);},
 };
 
@@ -406,10 +406,10 @@ function aiBlock(d){
   const stub=ai.generated_by==="stub",tr=ai.trace||{},n=d.alerts.length,stale=ai.alerts_covered!=null&&ai.alerts_covered<n,fl=ai.flags||[];
   const hd=stub?`<div class="hd">Rules-only summary (AI unavailable)</div>${tr.error?`<div class="trace" style="margin:0 0 8px">${esc(tr.error)}</div>`:""}`:
     `<div class="hd">✦ AI-generated — verify against timeline <span class="chip">${esc(ai.generated_by)}</span>${ai.confidence!=null?`<span class="chip">confidence ${Math.round(ai.confidence*100)}%</span>`:""}${MOCK?`<span class="chip rec">Recorded model output · ${esc(tr.model||ai.generated_by)} · ${esc(tr.called_at||"")}</span>`:""}</div>`;
-  const upd=stale?`<div class="upd">AI updating narrative… (covers ${ai.alerts_covered} of ${n} alerts)<div class="shimmer"></div></div>`:"";
+  const upd=stale&&!stub?`<div class="upd">AI updating narrative… (covers ${ai.alerts_covered} of ${n} alerts)<div class="shimmer"></div></div>`:"";
   const flags=fl.length?`<div class="flags"><b>⚠ Not in incident — verify</b><ul>${fl.map(f=>`<li><span class="mono">${esc(f.type)}: ${esc(f.value)}</span> (${esc(f.field)})</li>`).join("")}</ul></div>`:
     (stub?"":`<div class="noflag">✓ 0 entities outside the incident</div>`);
-  const trace=tr.model?`<div class="trace">${esc(tr.model)} · ${tr.latency_ms??"?"} ms · sha256 ${esc(String(tr.prompt_sha256||"").slice(0,12))} · ${esc(tr.called_at||"")}${tr.raw_response?` <details class="raw" ${S.rawOpen?"open":""}><summary>raw</summary><pre>${esc(tr.raw_response)}</pre></details>`:""}</div>`:"";
+  const trace=!stub&&tr.model?`<div class="trace">${esc(tr.model)} · ${tr.latency_ms??"?"} ms · sha256 ${esc(String(tr.prompt_sha256||"").slice(0,12))} · ${esc(tr.called_at||"")}${tr.raw_response?` <details class="raw" ${S.rawOpen?"open":""}><summary>raw</summary><pre>${esc(tr.raw_response)}</pre></details>`:""}</div>`:"";
   return `<div class="ai ${stub?"stub":""}">${hd}${upd}${flags}
     ${ai.hypothesis?`<p class="hyp">${esc(ai.hypothesis)}</p>`:""}${ai.narrative?`<p>${esc(ai.narrative)}</p>`:""}
     ${ai.recommended_actions?.length?`<div class="hd" style="margin:4px 0 0">Recommended (suggestions only; only catalog actions execute)</div><ol>${ai.recommended_actions.map(r=>`<li>${esc(r)}</li>`).join("")}</ol>`:""}${trace}</div>`;
@@ -433,7 +433,7 @@ function renderDetail(){
     <div class="big"><div class="num">${d.risk_score}</div><div class="of">risk / 100</div><div class="gauge"><i style="left:calc(${Math.min(100,d.risk_score)}% - 1px)"></i></div></div></div>
   ${d.status!=="closed"?ladder(d):""}${statement(d)}
   ${d.actions.length?`<h3>Response actions <span class="hint">↺ reversible: system runs it alone · ⚠ irreversible: analyst decides</span></h3>${d.actions.map(actionRow).join("")}
-    ${pend.length?`<div class="approve"><label for="approver">Analyst</label><input id="approver" value="${esc(approver)}" placeholder="your name" autocomplete="off"><span class="msg">${esc(S.approveMsg)}</span><button class="btn primary" id="btnApprove">Approve ${pend.length} irreversible action${pend.length===1?"":"s"}</button></div>`:""}`:""}
+    ${pend.length?`<div class="approve"><label for="approver">Analyst</label><input id="approver" value="${esc(approver)}" placeholder="your name" autocomplete="off" maxlength="80"><span class="msg">${esc(S.approveMsg)}</span><button class="btn primary" id="btnApprove">Approve ${pend.length} irreversible action${pend.length===1?"":"s"}</button></div>`:""}`:""}
   ${d.verdict!=="benign"||d.ai?`<h3>Narrative</h3>${aiBlock(d)}`:""}
   <h3>Timeline <span class="hint">${d.timeline.length} alerts, chronological</span></h3><div class="tl">${d.timeline.map(e=>{const a=byId[e.alert_id]||{};
     return `<div class="ev"><div class="l1"><span class="time">${hms(e.timestamp)}</span>${a.source?`<span class="src ${esc(a.source)}">${SRC[a.source]||esc(a.source)}</span>`:""}<span class="host">${esc(a.host||"")}</span>${a.user?`<span class="time">${esc(a.user)}</span>`:""}${e.technique?`<span class="tech">${esc(e.technique)}</span><span class="tactic">${esc(e.tactic)}</span>`:'<span class="tactic">no technique (noise)</span>'}<span class="aid">${esc(e.alert_id)}</span></div><div class="sum">${esc(e.summary)}</div></div>`;}).join("")}</div>
@@ -467,7 +467,8 @@ async function doApprove(){
   const who=approver.trim(),inp=$("approver");
   if(!who){S.approveMsg="Enter your name to sign the approval";inp?.blur();S.detailSig="";renderDetail();$("approver")?.focus();return;}
   const btn=$("btnApprove");if(btn){btn.disabled=true;btn.textContent="Approving…";}
-  try{S.detail=await api.approve(S.sel,who);S.approveMsg="";}catch(err){S.approveMsg=err.message;}
+  const id=S.sel;
+  try{const r=await api.approve(id,who);if(S.sel===id)S.detail=r;S.approveMsg="";}catch(err){S.approveMsg=err.message;}
   inp?.blur();S.detailSig="";S.incSig="";await tick();
 }
 let armed=0;
